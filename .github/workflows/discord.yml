@@ -2,7 +2,7 @@ name: Notify PR to Discord
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, closed]
 
 jobs:
   notify:
@@ -10,9 +10,24 @@ jobs:
     steps:
       - name: Send Discord Notification
         run: |
+          if [ "${{ github.event.action }}" = "opened" ]; then
+            MESSAGE="📢 A new pull request has been opened!\nRepository: ${{ github.repository }}\nAuthor: ${{ github.actor }}\nTitle: ${{ github.event.pull_request.title }}\nURL: ${{ github.event.pull_request.html_url }}"
+          
+          elif [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+            MESSAGE="✅ A pull request has been merged!\nRepository: ${{ github.repository }}\nMerged by: ${{ github.actor }}\nTitle: ${{ github.event.pull_request.title }}\nURL: ${{ github.event.pull_request.html_url }}"
+          
+          else
+            exit 0
+          fi
+
+          payload=$(cat <<EOF
+          {
+            "content": "$MESSAGE"
+          }
+          EOF
+          )
+
           curl -H "Content-Type: application/json" \
-          -X POST \
-          -d '{
-            "content": "📢 A new pull request has been opened!\nRepository: ${{ github.repository }}\nAuthor: ${{ github.actor }}\nTitle: ${{ github.event.pull_request.title }}\nURL: ${{ github.event.pull_request.html_url }}"
-          }' \
-          ${{ secrets.DISCORD_WEBHOOK }}
+              -X POST \
+              -d "$payload" \
+              ${{ secrets.DISCORD_WEBHOOK }}
