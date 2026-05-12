@@ -5,6 +5,18 @@ const path = require('path');
 
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
+
+// Allow cross-origin requests from the Vue dev server
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 const PORT = 3000;
 const REGISTRY_FILE = path.join(__dirname, 'users.json');
 
