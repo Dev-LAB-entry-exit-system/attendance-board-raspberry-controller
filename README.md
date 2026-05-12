@@ -118,7 +118,10 @@ cd attendance-board-raspberry-controller
 
 ### 2. Install Dependencies
 
+バックエンドは `backend/` ディレクトリで実行します。
+
 ```bash
+cd backend
 npm install
 ```
 
@@ -126,9 +129,13 @@ npm install
 
 ### 3. Start Server
 
+`backend` ディレクトリ内で次のコマンドを実行してください。
+
 ```bash
 node index.js
 ```
+
+リポジトリルートで `node index.js` を実行すると `index.js` が見つからないエラーになります。
 
 サーバが正常に起動すると、以下のように表示されます。
 
@@ -141,12 +148,12 @@ Scanner running on port 3000
 
 ### 4. Start Frontend (Vue + Vite)
 
-フロントエンドを起動するには、別ターミナルで `frontend` ディレクトリへ移動して依存関係をインストールします。
+フロントエンドを起動するには、別ターミナルで `http://localhost:3000/api/devicesdebug-frontend` ディレクトリへ移動して依存関係をインストールします。
 
-To start the frontend, open another terminal, move into the `frontend` directory, and install dependencies.
+To start the frontend, open another terminal, move into the `debug-frontend` directory, and install dependencies.
 
 ```bash
-cd frontend
+cd debug-frontend
 npm install
 npm run dev
 ```
@@ -163,12 +170,14 @@ http://localhost:5173
 
 ### 5. Access API
 
-ブラウザまたはAPIクライアントで以下へアクセスします。
+バックエンドが起動したら、ブラウザや API クライアントで直接確認できます。
 
-Access the following URL from your browser or API client:
+Access the backend directly from your browser or API client:
 ```text
 http://localhost:3000/api/devices
 ```
+
+この URL を開くと、検出済みデバイスと登録済みユーザー情報を含む JSON レスポンスが表示されます。
 
 ---
 
