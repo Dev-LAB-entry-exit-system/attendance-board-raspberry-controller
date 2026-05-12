@@ -66,22 +66,25 @@ The Raspberry Pi scans devices on the local network, matches them with registere
 
 ## ⚙️ Setup
 
-### 0. Install Node.js
+### 0. Raspberry Pi and local repository
 
-#### Windows
+- Raspberry Pi側は`main`ブランチと同期しています。
+- ローカル環境ではリポジトリが`Documents/GIT/attendance-board-rasberry-controller`内にあります。
 
-Install the LTS version of Node.js from the official website.
+### 1. Raspberry Pi access
 
-https://nodejs.org/
+Raspberry Piのログイン情報:
 
-After installation, verify it with:
+- ユーザーID: `procon_a`
+- パスワードは大小文字を含む12文字です
+
+Raspberry Piのターミナルに接続するには、以下のSSHコマンドを実行します。
 
 ```bash
-node -v
-npm -v
+ssh procon_a@172.16.0.61
 ```
 
----
+### 2. Install Node.js
 
 #### Raspberry Pi / Linux
 
@@ -107,7 +110,22 @@ npm -v
 
 ---
 
-### 1. Clone Repository
+#### Windows
+
+Install the LTS version of Node.js from the official website.
+
+https://nodejs.org/
+
+After installation, verify it with:
+
+```bash
+node -v
+npm -v
+```
+
+---
+
+### 3. Clone Repository
 
 ```bash
 git clone <repository-url>
@@ -116,7 +134,7 @@ cd attendance-board-raspberry-controller
 
 ---
 
-### 2. Install Dependencies
+### 3. Install Dependencies
 
 バックエンドは `backend/` ディレクトリで実行します。
 
@@ -127,7 +145,7 @@ npm install
 
 ---
 
-### 3. Start Server
+### 4. Start Server
 
 `backend` ディレクトリ内で次のコマンドを実行してください。
 
@@ -146,7 +164,7 @@ Scanner running on port 3000
 
 ---
 
-### 4. Start Frontend (Vue + Vite)
+### 5. Start Frontend (Vue + Vite)
 
 フロントエンドを起動するには、別ターミナルで `http://localhost:3000/api/devicesdebug-frontend` ディレクトリへ移動して依存関係をインストールします。
 
