@@ -133,19 +133,39 @@ node index.js
 サーバが正常に起動すると、以下のように表示されます。
 
 When the server starts successfully, the following message will appear:
-
 ```text
 Scanner running on port 3000
 ```
 
 ---
 
-### 4. Access API
+### 4. Start Frontend (Vue + Vite)
+
+フロントエンドを起動するには、別ターミナルで `frontend` ディレクトリへ移動して依存関係をインストールします。
+
+To start the frontend, open another terminal, move into the `frontend` directory, and install dependencies.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+起動後はブラウザで以下にアクセスします。
+
+After startup, open:
+
+```text
+http://localhost:5173
+```
+
+---
+
+### 5. Access API
 
 ブラウザまたはAPIクライアントで以下へアクセスします。
 
 Access the following URL from your browser or API client:
-
 ```text
 http://localhost:3000/api/devices
 ```
