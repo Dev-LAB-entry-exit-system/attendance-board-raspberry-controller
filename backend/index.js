@@ -1,17 +1,42 @@
 const express = require('express');
 const findLocalDevices = require('local-devices');
+const fs = require('fs/promises');
+const path = require('path');
 
 const app = express();
 app.use(express.json()); // Middleware to parse JSON bodies
 const PORT = 3000;
+const REGISTRY_FILE = path.join(__dirname, 'users.json');
 
-// In-memory storage for our users
+// In-memory storage for our users (persisted to users.json)
 // Format: { name: String, ledId: Number, ip: String }
 let userRegistry = [];
 
+async function loadUserRegistry() {
+    try {
+        const data = await fs.readFile(REGISTRY_FILE, 'utf8');
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) {
+            userRegistry = parsed;
+        } else {
+            userRegistry = [];
+        }
+    } catch (error) {
+        // ENOENT means users.json does not exist yet; start empty.
+        if (error.code !== 'ENOENT') {
+            console.error('Failed to load users.json:', error);
+        }
+        userRegistry = [];
+    }
+}
+
+async function saveUserRegistry() {
+    await fs.writeFile(REGISTRY_FILE, JSON.stringify(userRegistry, null, 2), 'utf8');
+}
+
 // 1. Registration Endpoint
 // POST: { "name": "Alice", "ledId": 1, "ip": "192.168.1.15" }
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
     const { name, ledId, ip } = req.body;
 
     if (!name || ledId === undefined || !ip) {
@@ -26,7 +51,12 @@ app.post('/api/register', (req, res) => {
         userRegistry.push({ name, ledId, ip });
     }
 
-    res.status(201).json({ message: "User registered successfully", registry: userRegistry });
+    try {
+        await saveUserRegistry();
+        res.status(201).json({ message: "User registered successfully", registry: userRegistry });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to save user registry" });
+    }
 });
 
 // 2. Extended Device Scan Endpoint
@@ -56,4 +86,6 @@ app.get('/api/devices', async (req, res) => {
     }
 });
 
-app.listen(PORT, () => console.log(`Scanner running on port ${PORT}`));
+loadUserRegistry().finally(() => {
+    app.listen(PORT, () => console.log(`Scanner running on port ${PORT}`));
+});
