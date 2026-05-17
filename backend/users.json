@@ -13,5 +13,10 @@
     "name": "Takato-phone",
     "ledId": 4,
     "ip": "172.16.0.37"
+  },
+  {
+    "name": "Miku",
+    "ledId": 5,
+    "ip": "172.16.0.32"
   }
 ]
