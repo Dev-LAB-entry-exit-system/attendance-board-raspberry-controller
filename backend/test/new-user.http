@@ -1,0 +1,5 @@
+### Create a user
+POST http://localhost:8080/api/register
+Content-Type: application/json
+
+{ "name": "Miku", "ledId": 5, "ip": "172.16.0.39" }
