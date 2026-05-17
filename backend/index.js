@@ -2,23 +2,22 @@ const express = require('express');
 const findLocalDevices = require('local-devices');
 const fs = require('fs/promises');
 const path = require('path');
+const cors = require('cors')
 
 const app = express();
+const PORT = 3000;
+const REGISTRY_FILE = path.join(__dirname, 'users.json');
+const corsOptions = {
+    origin: ['http://localhost:8080'], // allowed origins
+    methods: ['GET', 'POST', 'OPTIONS'], // allowed HTTP methods
+    allowedHeaders: ['Content-Type'], // allowed headers
+    optionsSuccessStatus: 204 // Translates the OPTIONS preflight check and 204 response
+};
+
 app.use(express.json()); // Middleware to parse JSON bodies
 
 // Allow cross-origin requests from the Vue dev server
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:8080');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(204);
-  }
-  next();
-});
-
-const PORT = 3000;
-const REGISTRY_FILE = path.join(__dirname, 'users.json');
+app.use(cors(corsOptions));
 
 // In-memory storage for our users (persisted to users.json)
 // Format: { name: String, ledId: Number, ip: String }

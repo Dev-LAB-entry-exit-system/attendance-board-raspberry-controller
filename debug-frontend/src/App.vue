@@ -6,7 +6,7 @@ const scanResults = ref([])
 
 const fetchDevices = async () => {
   try {
-    const response = await fetch('http://localhost:3000/api/devices')
+    const response = await fetch('/api/devices')
     const data = await response.json()
 
     scanResults.value = data.allDevices
@@ -65,7 +65,11 @@ onMounted(() => {
   flex-wrap: wrap;
   gap: 1em;
   justify-content: center;
-  padding: 40px;
+  padding: 4em;
+  @media (max-width: 1024px) {
+    padding-left: 1em;
+    padding-right: 1em;
+  }
 }
 
 .section {
