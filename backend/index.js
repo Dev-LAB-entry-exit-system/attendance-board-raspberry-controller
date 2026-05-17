@@ -69,6 +69,10 @@ async function updateUserRegister(name, ledId, ip, res) {
     }
 }
 
+function getIP(req) {
+    return (req.ip || req.socket.remoteAddress).replace('::ffff:', '');
+}
+
 // 1. Registration Endpoint
 // POST: { "name": "Alice", "ledId": 1, "ip": "192.168.1.15" }
 app.post('/api/register', async (req, res) => {
@@ -76,7 +80,7 @@ app.post('/api/register', async (req, res) => {
 
     // This will be the Public IP if they are on the internet.
     // It will be the Private IP if they are on the same WiFi as the server.
-    const clientIp = (req.ip || req.socket.remoteAddress).replace('::ffff:', '');
+    const clientIp = getIP(req);
     console.log('POST from:', clientIp);
 
     const finalIpAddress = ip ? ip : clientIp;
