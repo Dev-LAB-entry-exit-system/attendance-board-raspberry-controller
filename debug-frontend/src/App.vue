@@ -1,8 +1,10 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const activeUsers = ref([])
 const scanResults = ref([])
+const UPDATE_INTERVAL = 60*1000 // 60 seconds
+let intervalId
 
 const fetchDevices = async () => {
   try {
@@ -18,6 +20,11 @@ const fetchDevices = async () => {
 
 onMounted(() => {
   fetchDevices()
+  intervalId = setInterval(fetchDevices, UPDATE_INTERVAL)
+})
+
+onUnmounted(() => {
+  clearInterval(intervalId)
 })
 </script>
 
