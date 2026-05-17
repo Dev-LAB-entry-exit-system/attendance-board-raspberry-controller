@@ -74,7 +74,7 @@ onMounted(() => {
 
 .section {
   padding-top: 2em;
-  max-width: 100%; // Change to 45% for two column layout on desktop.
+  max-width: 100%; /* Change to 45% for two column layout on desktop.*/
   @media (max-width: 1024px) {
     max-width: 100%;
   }
