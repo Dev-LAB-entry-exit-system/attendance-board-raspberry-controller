@@ -63,7 +63,7 @@ onMounted(() => {
 .container {
   display: flex;
   flex-wrap: wrap;
-  gap: 1em;
+  gap: 3em;
   justify-content: center;
   padding: 4em;
   @media (max-width: 1024px) {
@@ -74,6 +74,10 @@ onMounted(() => {
 
 .section {
   padding-top: 2em;
+  max-width: 100%; // Change to 45% for two column layout on desktop.
+  @media (max-width: 1024px) {
+    max-width: 100%;
+  }
 }
 
 .page-title {
