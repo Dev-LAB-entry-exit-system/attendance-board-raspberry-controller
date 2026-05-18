@@ -114,7 +114,8 @@ onUnmounted(() => {
             class="fab-button"
             title="Add New User"
           >
-            +
+            <img class="sign-up-qrcode" src="./assets/attendance-board-qrcode.png" alt="QRCode to Sign-Up with Mobile Device.">
+            <span class="sign-up-text">+</span>
           </button>
           <form v-if="isFormVisible"
               id="registration-form"
@@ -334,6 +335,25 @@ li {
 
 .fab-button:hover {
   background-color: var(--accent);
+}
+
+.sign-up-qrcode {
+  display: inherit;
+  max-width: 4em;
+  visibility: visible;
+  @media (max-width: 1024px) {
+    display: none;
+    visibility: hidden;
+  }
+}
+
+.sign-up-text {
+  display: none;
+  visibility: hidden;
+  @media (max-width: 1024px) {
+    visibility: visible;
+    display: inherit;
+  }
 }
 
 .hidden {
