@@ -6,7 +6,8 @@
   --bg: #fff;
   --border: #e5e4e7;
   --code-bg: #f4f3ec;
-  --accent: #aa3bff;
+  --accent: #06A098;
+  --accent-h: #036560;
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
@@ -52,6 +53,10 @@
   }
 }
 
+body, main, header, footer, nav, div, h1, h2, span, p, a, span, strong {
+  transition: all 0.7s ease;
+}
+
 body {
   margin: 0;
 }
@@ -83,6 +88,27 @@ h2 {
 }
 p {
   margin: 0;
+  margin-top: 0.3em;
+}
+
+button {
+  display: inline-block;
+  border: none;
+  outline: none;
+  background: lightgray;
+  color: black;
+  cursor: pointer;
+  border-radius: 5px;
+  text-align: center;
+  padding: 0.5em;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 3px 3px 3px rgba(0,0,0,0.3);
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+button:hover {
+  background-color: var(--accent);
 }
 
 code,
