@@ -1,22 +1,12 @@
 [
   {
-    "name": "Takato",
-    "ledId": 1,
-    "ip": "172.16.0.236"
-  },
-  {
-    "name": "Iori",
-    "ledId": 3,
-    "ip": "172.16.0.24"
-  },
-  {
-    "name": "Takato-phone",
-    "ledId": 4,
-    "ip": "172.16.0.37"
+    "name": "Iroh",
+    "ledId": 0,
+    "ip": "127.0.0.1"
   },
   {
     "name": "Miku",
     "ledId": 5,
-    "ip": "172.16.0.32"
+    "ip": "172.16.0.39"
   }
 ]
