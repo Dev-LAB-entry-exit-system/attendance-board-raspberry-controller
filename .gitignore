@@ -273,6 +273,8 @@ http-client.private.env.json
 #  and can be added to the global gitignore or merged into this file. However, if you prefer, 
 #  you could uncomment the following to ignore the entire vscode folder
 # .vscode/
+backend/.vscode/*
+debug-frontend/.vscode/*
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
@@ -303,5 +305,7 @@ marimo/_lsp/
 __marimo__/
 
 # Node.js
+backend/node_modules/
+debug-frontend/node_modules/
 node_modules/
 npm-debug.log*
