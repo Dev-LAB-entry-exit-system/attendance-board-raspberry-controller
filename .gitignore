@@ -309,3 +309,6 @@ backend/node_modules/
 debug-frontend/node_modules/
 node_modules/
 npm-debug.log*
+
+#Exclude Database Files
+backend/users.json
