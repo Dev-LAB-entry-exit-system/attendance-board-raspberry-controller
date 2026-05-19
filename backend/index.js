@@ -8,6 +8,17 @@ const cors = require('cors')
 const app = express();
 const PORT = 3000;
 const REGISTRY_FILE = path.join(__dirname, 'users.json');
+
+// Presence detection: scan often, require multiple hits per minute to reduce false positives.
+// Example default: 6 scans/min (every 10s), present if seen in at least 4 of the last 6 scans.
+const SCAN_INTERVAL_MS = Number(process.env.SCAN_INTERVAL_MS) || 10 * 1000;
+const SCANS_PER_WINDOW = Number(process.env.SCANS_PER_WINDOW) || 6;
+const PRESENCE_THRESHOLD = Number(process.env.PRESENCE_THRESHOLD) || 4;
+const LOG_PRESENCE = process.env.LOG_PRESENCE !== '0';
+
+// mac -> last isPresent (for transition messages)
+const previousPresenceState = new Map();
+
 const corsOptions = {
     origin: ['http://localhost:8080'], // allowed origins
     methods: ['GET', 'POST', 'OPTIONS'], // allowed HTTP methods
@@ -24,11 +35,13 @@ app.use(cors(corsOptions));
 app.set('trust proxy', true);
 
 // In-memory storage for our users (persisted to users.json)
-// Format: { name: String, ledId: Number, ip: String }
+// Format: { name: String, ledId: Number, mac: String }
 let userRegistry = [];
 let deviceCache = [];
 let lastScanTime = 0;
-const CACHE_TTL_MS = 30 * 1000; // 30 seconds
+let scanInProgress = false;
+// mac (lowercase) -> recent scan results (true = seen on LAN)
+const presenceHistory = new Map();
 
 async function loadUserRegistry() {
     try {
@@ -73,34 +86,176 @@ async function updateUserRegister(name, ledId, mac, res) {
     }
 }
 
-async function fetchLocalDevicesList(force = false) {
-    const currentTime = Date.now();
-
-    // Check if cache is expired or empty
-    if (currentTime - lastScanTime > CACHE_TTL_MS || deviceCache.length === 0 || force) {
-        deviceCache = await findLocalDevices();
-        lastScanTime = currentTime;
-        console.log(`[${new Date().toISOString()}] Performed fresh network scan.`);
-        return true;
-    }
-    return false;
+function normalizeMac(mac) {
+    return mac.toLowerCase();
 }
 
-async function getLocalDeviceList () {
-    await fetchLocalDevicesList();
+function getPresenceHits(mac) {
+    const history = presenceHistory.get(normalizeMac(mac)) || [];
+    return history.filter(Boolean).length;
+}
 
-    // Map through discovered devices and "attach" user info if a match is found
+function isUserPresent(mac) {
+    const history = presenceHistory.get(normalizeMac(mac)) || [];
+    if (history.length < SCANS_PER_WINDOW) {
+        return false;
+    }
+    return history.filter(Boolean).length >= PRESENCE_THRESHOLD;
+}
+
+function recordScanPresence(detectedMacs) {
+    const detectedSet = new Set(detectedMacs.map(normalizeMac));
+
+    for (const user of userRegistry) {
+        const mac = normalizeMac(user.mac);
+        if (!presenceHistory.has(mac)) {
+            presenceHistory.set(mac, []);
+        }
+        const history = presenceHistory.get(mac);
+        history.push(detectedSet.has(mac));
+        while (history.length > SCANS_PER_WINDOW) {
+            history.shift();
+        }
+    }
+}
+
+function formatHistoryDots(history) {
+    if (history.length === 0) {
+        return '(no data yet)';
+    }
+    return history.map(seen => (seen ? '●' : '○')).join('');
+}
+
+function getPresenceStatusLabel(mac) {
+    const history = presenceHistory.get(normalizeMac(mac)) || [];
+    if (history.length < SCANS_PER_WINDOW) {
+        return `WARMING UP (${history.length}/${SCANS_PER_WINDOW})`;
+    }
+    return isUserPresent(mac) ? 'PRESENT' : 'ABSENT';
+}
+
+function logPresenceToConsole() {
+    if (!LOG_PRESENCE) {
+        return;
+    }
+
+    const timestamp = new Date().toISOString();
+    const activeCount = getActiveUsers().length;
+    console.log('');
+    console.log(`── Scan @ ${timestamp} ──`);
+    console.log(
+        `  LAN devices: ${deviceCache.length} | ` +
+        `Present: ${activeCount}/${userRegistry.length} | ` +
+        `Rule: ${PRESENCE_THRESHOLD}+ hits in last ${SCANS_PER_WINDOW} scans`
+    );
+
+    if (userRegistry.length === 0) {
+        console.log('  (no registered users in users.json)');
+        console.log('────────────────────────────');
+        return;
+    }
+
+    for (const user of userRegistry) {
+        const mac = normalizeMac(user.mac);
+        const history = presenceHistory.get(mac) || [];
+        const hits = history.filter(Boolean).length;
+        const seenNow = deviceCache.some(d => normalizeMac(d.mac) === mac);
+        const present = isUserPresent(mac);
+        const warmingUp = history.length < SCANS_PER_WINDOW;
+        const status = getPresenceStatusLabel(mac);
+        const device = deviceCache.find(d => normalizeMac(d.mac) === mac);
+        const ip = device ? device.ip : '-';
+
+        const prev = previousPresenceState.get(mac);
+        if (prev !== undefined && prev !== present && !warmingUp) {
+            const change = present ? '→ IN ROOM' : '→ LEFT';
+            console.log(`  ★ ${user.name} ${change}`);
+        }
+        previousPresenceState.set(mac, present);
+
+        console.log(
+            `  ${user.name} (LED ${user.ledId})` +
+            ` | ${hits}/${SCANS_PER_WINDOW} ${formatHistoryDots(history)}` +
+            ` | this scan: ${seenNow ? 'seen' : '---'}` +
+            ` | IP: ${ip}` +
+            ` | ${status}`
+        );
+    }
+
+    console.log('────────────────────────────');
+}
+
+async function performBackgroundScan() {
+    if (scanInProgress) {
+        if (LOG_PRESENCE) {
+            console.log(`[${new Date().toISOString()}] Scan skipped (previous scan still running)`);
+        }
+        return false;
+    }
+
+    scanInProgress = true;
+    try {
+        deviceCache = await findLocalDevices();
+        lastScanTime = Date.now();
+        recordScanPresence(deviceCache.map(device => device.mac));
+        logPresenceToConsole();
+        return true;
+    } catch (error) {
+        console.error(`[${new Date().toISOString()}] Background scan failed:`, error);
+        return false;
+    } finally {
+        scanInProgress = false;
+    }
+}
+
+function startBackgroundScanner() {
+    performBackgroundScan();
+    setInterval(performBackgroundScan, SCAN_INTERVAL_MS);
+    console.log(
+        `Presence scanner: every ${SCAN_INTERVAL_MS / 1000}s, ` +
+        `present if >= ${PRESENCE_THRESHOLD}/${SCANS_PER_WINDOW} scans in window`
+    );
+    if (LOG_PRESENCE) {
+        console.log('Presence console log: ON (set LOG_PRESENCE=0 to disable)');
+    }
+}
+
+function getLocalDeviceList() {
     return deviceCache.map(device => {
-        const normalizedDeviceMac = device.mac.toLowerCase();
-        const user = userRegistry.find(u => u.mac === normalizedDeviceMac);
+        const normalizedDeviceMac = normalizeMac(device.mac);
+        const user = userRegistry.find(u => normalizeMac(u.mac) === normalizedDeviceMac);
+        const registered = !!user;
         return {
             ip: device.ip,
             mac: device.mac,
             name: user ? user.name : "Unknown",
             ledId: user ? user.ledId : null,
-            isRegistered: !!user
+            isRegistered: registered,
+            seenInLatestScan: true,
+            isPresent: registered && isUserPresent(device.mac),
+            presenceHits: registered ? getPresenceHits(device.mac) : null,
+            presenceScans: registered ? (presenceHistory.get(normalizedDeviceMac) || []).length : null
         };
     });
+}
+
+function getActiveUsers() {
+    return userRegistry
+        .filter(user => isUserPresent(user.mac))
+        .map(user => {
+            const mac = normalizeMac(user.mac);
+            const device = deviceCache.find(d => normalizeMac(d.mac) === mac);
+            const history = presenceHistory.get(mac) || [];
+            return {
+                name: user.name,
+                ledId: user.ledId,
+                mac: user.mac,
+                ip: device ? device.ip : null,
+                presenceHits: history.filter(Boolean).length,
+                presenceScans: history.length,
+                isPresent: true
+            };
+        });
 }
 
 function getIP(req) {
@@ -108,7 +263,7 @@ function getIP(req) {
 }
 
 async function getMac(ip) {
-    const devices = await getLocalDeviceList();
+    const devices = getLocalDeviceList();
 
     const index = devices.findIndex(device => device.ip === ip);
     if (index !== -1) {
@@ -122,7 +277,7 @@ async function getMac(ip) {
 // POST: { "name": "Alice", "ledId": 1, "ip": "192.168.1.15" }
 app.post('/api/register', async (req, res) => {
     const { name, ledId, ip } = req.body;
-    await fetchLocalDevicesList(true);
+    await performBackgroundScan();
 
     // This will be the Public IP if they are on the internet.
     // It will be the Private IP if they are on the same WiFi as the server.
@@ -152,20 +307,30 @@ app.post('/api/register', async (req, res) => {
 // 2. Extended Device Scan Endpoint
 app.get('/api/devices', async (req, res) => {
     try {
-        const currentTime = Date.now();
-        let fromCache = !(await fetchLocalDevicesList());
+        const activeUsers = getActiveUsers();
+        if (LOG_PRESENCE) {
+            console.log(
+                `[${new Date().toISOString()}] GET /api/devices from ${getIP(req)}` +
+                ` → ${activeUsers.length} present` +
+                (activeUsers.length > 0
+                    ? ` (${activeUsers.map(u => u.name).join(', ')})`
+                    : '')
+            );
+        }
 
-        console.log(`[${new Date().toISOString()}] GET from:`, getIP(req));
-
-        const results =  await getLocalDeviceList();
+        const results = getLocalDeviceList();
 
         res.json({
             meta: {
-                fromCache,
-                cacheAgeSeconds: Math.round((currentTime - lastScanTime) / 1000)
+                lastScanAgeSeconds: lastScanTime
+                    ? Math.round((Date.now() - lastScanTime) / 1000)
+                    : null,
+                scanIntervalSeconds: SCAN_INTERVAL_MS / 1000,
+                scansPerWindow: SCANS_PER_WINDOW,
+                presenceThreshold: PRESENCE_THRESHOLD
             },
             count: results.length,
-            activeUsers: results.filter(d => d.isRegistered),
+            activeUsers,
             allDevices: results
         });
     } catch (error) {
@@ -175,5 +340,14 @@ app.get('/api/devices', async (req, res) => {
 });
 
 loadUserRegistry().finally(() => {
-    app.listen(PORT, () => console.log(`Scanner running on port ${PORT}`));
+    app.listen(PORT, () => {
+        console.log(`Scanner running on port ${PORT}`);
+        console.log(`Registered users: ${userRegistry.length}`);
+        if (userRegistry.length > 0 && LOG_PRESENCE) {
+            for (const user of userRegistry) {
+                console.log(`  - ${user.name} (LED ${user.ledId}, MAC ${user.mac})`);
+            }
+        }
+        startBackgroundScanner();
+    });
 });
