@@ -221,9 +221,42 @@ Registers user information.
 {
   "name": "Takato",
   "ledId": 3,
-  "ip": "172.16.0.143"
+  "ip": "172.16.0.143",
+  "discordId": "123456789012345678"
 }
 ```
+
+`discordId` は任意です。入れたユーザーについては、**LAN で在室と判定されたときに Bot が `at HILab` ロールを付与**し、**退室と判定されたらロールを外します**（下記）。
+
+Discord 関連の同期処理は `backend/discord.js` に分離されています。
+
+---
+
+## Discord「at HILab」ロールの自動付与・削除
+
+在室判定は **従来どおり LAN スキャン履歴**（`isUserPresent`）です。`users.json` に **`discordId`** があるユーザーだけ、Discord 上の **`at HILab`** ロールをそれに合わせて更新します。
+
+### 手順
+
+1. Discord でロール **`at HILab`** を作成（名前は `DISCORD_AT_HILAB_ROLE_NAME` で変更可）
+2. **Bot のロールを、`at HILab` より上**に並べる（Discord の「ロールの管理」では、上のロールが下位ロールを付与できる）
+3. Bot に **`ロールの管理`（Manage Roles）** 権限を付与
+4. [Developer Portal](https://discord.com/developers/applications) で Bot を作成しトークンを取得
+5. **Privileged Gateway Intents** で **SERVER MEMBERS INTENT** を ON（メンバー取得に必要）
+6. Bot を研究室サーバーに招待
+7. `backend/.env` に `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_AT_HILAB_ROLE_ID`（推奨）を設定
+   - `backend/.env.example` は例なので、実際の稼働時は `backend/.env` を作成してください
+8. 各ユーザーの **Discord ユーザー ID** を `discordId` として登録
+
+### 動作
+
+- **在室（LAN 判定）** → その人に **`at HILab` を付与**（まだ付いていなければ）
+- **退室（履歴が `SCANS_PER_WINDOW` 回たまったうえで在室条件を満たさない）** → **`at HILab` を削除**（付いていれば）
+- ウォームアップ中（履歴が 6 回未満）は **ロールを外さない**（起動直後に全員から剥がすのを防ぐ）
+
+### API
+
+`GET /api/devices` の `meta.discordRoleSync` が true のとき、Bot がログイン済みでロール同期が有効です。在室判定そのものは `presenceSource: 'lan'` です。
 
 ---
 
