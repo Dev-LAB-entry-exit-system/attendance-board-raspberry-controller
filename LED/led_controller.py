@@ -2,10 +2,10 @@ import RPi.GPIO as GPIO
 import time
 
 # LED番号とGPIOピンの対応リスト
-led_pins = [4, 17, 27, 22, 5, 6, 13, 19, 26, 18, 23, 24, 25, 16]
+led_pins = [4, 17, 27, 22, 5, 6, 13, 19, 26, 18, 23, 24, 25, 16, 20]
 
 # LEDの状態を管理するリスト
-led_states = [False] * 14
+led_states = [False] * len(led_pins)
 
 def init_led():
     """
