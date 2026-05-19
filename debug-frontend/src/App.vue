@@ -33,7 +33,7 @@ async function registerDevice() {
     ledId: Number(ledId.value),
   };
 
-  if (discordId.value.trim() !== '') {
+  if (discordId.value.trim() !== '' && discordId.value.length >= 17) {
     payload.discordId = discordId.value;
   }
 
@@ -168,8 +168,8 @@ onUnmounted(() => {
                    v-model="discordId"
                    name="discordId"
                    placeholder="012345678901234567"
-                   minlength="18"
-                   maxlength="18"
+                   minlength="17"
+                   maxlength="19"
                    class="card-field"
             >
             <br>
