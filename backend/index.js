@@ -11,10 +11,10 @@ const REGISTRY_FILE = path.join(__dirname, 'users.json');
 
 // Presence detection: scan often, require multiple hits per minute to reduce false positives.
 // Example default: 6 scans/min (every 10s), present if seen in at least 4 of the last 6 scans.
-const SCAN_INTERVAL_MS = Number(process.env.SCAN_INTERVAL_MS) || 10 * 1000;
+const SCAN_INTERVAL_MS = Number(process.env.SCAN_INTERVAL_MS) || 30 * 1000;
 const SCANS_PER_WINDOW = Number(process.env.SCANS_PER_WINDOW) || 6;
-const PRESENCE_THRESHOLD = Number(process.env.PRESENCE_THRESHOLD) || 4;
-const LOG_PRESENCE = process.env.LOG_PRESENCE !== '0';
+const PRESENCE_THRESHOLD = Number(process.env.PRESENCE_THRESHOLD) || 1;
+const LOG_PRESENCE = process.env.LOG_PRESENCE === 'true';
 
 // mac -> last isPresent (for transition messages)
 const previousPresenceState = new Map();
