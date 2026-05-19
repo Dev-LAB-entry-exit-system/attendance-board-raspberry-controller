@@ -1,9 +1,12 @@
+require('dotenv').config();
+
 const express = require('express');
 const findLocalDevices = require('local-devices');
 const fs = require('fs/promises');
 const path = require('path');
 const net = require('net');
-const cors = require('cors')
+const cors = require('cors');
+const discordMirror = require('./discord');
 
 const app = express();
 const PORT = 3000;
@@ -16,7 +19,7 @@ const SCANS_PER_WINDOW = Number(process.env.SCANS_PER_WINDOW) || 6;
 const PRESENCE_THRESHOLD = Number(process.env.PRESENCE_THRESHOLD) || 1;
 const LOG_PRESENCE = process.env.LOG_PRESENCE === 'true';
 
-// mac -> last isPresent (for transition messages)
+// mac -> last LAN isPresent (for transition log lines)
 const previousPresenceState = new Map();
 
 const corsOptions = {
@@ -35,7 +38,7 @@ app.use(cors(corsOptions));
 app.set('trust proxy', true);
 
 // In-memory storage for our users (persisted to users.json)
-// Format: { name: String, ledId: Number, mac: String }
+// Format: { name: String, ledId: Number, mac: String, discordId?: String }
 let userRegistry = [];
 let deviceCache = [];
 let lastScanTime = 0;
@@ -65,17 +68,39 @@ async function saveUserRegistry() {
     await fs.writeFile(REGISTRY_FILE, JSON.stringify(userRegistry, null, 2), 'utf8');
 }
 
-async function updateUserRegister(name, ledId, mac, res) {
+function normalizeDiscordId(id) {
+    if (id === undefined || id === null || id === '') {
+        return undefined;
+    }
+    const s = String(id).trim();
+    if (!/^\d{17,20}$/.test(s)) {
+        return undefined;
+    }
+    return s;
+}
+
+async function updateUserRegister(name, ledId, mac, res, discordId) {
     // Delete any existing user that has this exact ledId
     userRegistry = userRegistry.filter(user => user.ledId !== ledId);
 
     // Update if MAC already exists, otherwise add new
     const normalizedMac = mac.toLowerCase();
     const index = userRegistry.findIndex(u => u.mac === normalizedMac);
+    const normalizedDiscord = normalizeDiscordId(discordId);
+    const preservedDiscord =
+        index !== -1 ? normalizeDiscordId(userRegistry[index].discordId) : undefined;
+
+    const entry = { name, ledId, mac: normalizedMac };
+    if (normalizedDiscord) {
+        entry.discordId = normalizedDiscord;
+    } else if (preservedDiscord) {
+        entry.discordId = preservedDiscord;
+    }
+
     if (index !== -1) {
-        userRegistry[index] = { name, ledId, mac: normalizedMac };
+        userRegistry[index] = entry;
     } else {
-        userRegistry.push({ name, ledId, mac: normalizedMac });
+        userRegistry.push(entry);
     }
 
     try {
@@ -146,7 +171,8 @@ function logPresenceToConsole() {
     console.log(
         `  LAN devices: ${deviceCache.length} | ` +
         `Present: ${activeCount}/${userRegistry.length} | ` +
-        `Rule: ${PRESENCE_THRESHOLD}+ hits in last ${SCANS_PER_WINDOW} scans`
+        `Rule: ${PRESENCE_THRESHOLD}+ hits in last ${SCANS_PER_WINDOW} scans` +
+            (discordMirror.isDiscordRoleSyncEnabled() ? ' | Discord at HILab role sync: ON' : '')
     );
 
     if (userRegistry.length === 0) {
@@ -157,6 +183,7 @@ function logPresenceToConsole() {
 
     for (const user of userRegistry) {
         const mac = normalizeMac(user.mac);
+        const key = mac;
         const history = presenceHistory.get(mac) || [];
         const hits = history.filter(Boolean).length;
         const seenNow = deviceCache.some(d => normalizeMac(d.mac) === mac);
@@ -166,19 +193,21 @@ function logPresenceToConsole() {
         const device = deviceCache.find(d => normalizeMac(d.mac) === mac);
         const ip = device ? device.ip : '-';
 
-        const prev = previousPresenceState.get(mac);
+        const prev = previousPresenceState.get(key);
         if (prev !== undefined && prev !== present && !warmingUp) {
             const change = present ? '→ IN ROOM' : '→ LEFT';
             console.log(`  ★ ${user.name} ${change}`);
         }
-        previousPresenceState.set(mac, present);
+        previousPresenceState.set(key, present);
 
+        const discordNote = normalizeDiscordId(user.discordId) ? ' | Discord: mirror at HILab' : '';
         console.log(
             `  ${user.name} (LED ${user.ledId})` +
             ` | ${hits}/${SCANS_PER_WINDOW} ${formatHistoryDots(history)}` +
             ` | this scan: ${seenNow ? 'seen' : '---'}` +
             ` | IP: ${ip}` +
-            ` | ${status}`
+            ` | ${status}` +
+            discordNote
         );
     }
 
@@ -199,6 +228,7 @@ async function performBackgroundScan() {
         lastScanTime = Date.now();
         recordScanPresence(deviceCache.map(device => device.mac));
         logPresenceToConsole();
+        await discordMirror.syncDiscordRolesFromLanPresence(userRegistry, presenceHistory, isUserPresent, normalizeDiscordId);
         return true;
     } catch (error) {
         console.error(`[${new Date().toISOString()}] Background scan failed:`, error);
@@ -216,7 +246,7 @@ function startBackgroundScanner() {
         `present if >= ${PRESENCE_THRESHOLD}/${SCANS_PER_WINDOW} scans in window`
     );
     if (LOG_PRESENCE) {
-        console.log('Presence console log: ON (set LOG_PRESENCE=0 to disable)');
+        console.log('Presence console log: ON');
     }
 }
 
@@ -232,7 +262,8 @@ function getLocalDeviceList() {
             ledId: user ? user.ledId : null,
             isRegistered: registered,
             seenInLatestScan: true,
-            isPresent: registered && isUserPresent(device.mac),
+            isPresent: registered && isUserPresent(user.mac),
+            presenceSource: registered ? 'lan' : null,
             presenceHits: registered ? getPresenceHits(device.mac) : null,
             presenceScans: registered ? (presenceHistory.get(normalizedDeviceMac) || []).length : null
         };
@@ -250,7 +281,9 @@ function getActiveUsers() {
                 name: user.name,
                 ledId: user.ledId,
                 mac: user.mac,
+                discordId: user.discordId || null,
                 ip: device ? device.ip : null,
+                presenceSource: 'lan',
                 presenceHits: history.filter(Boolean).length,
                 presenceScans: history.length,
                 isPresent: true
@@ -276,7 +309,7 @@ async function getMac(ip) {
 // 1. Registration Endpoint
 // POST: { "name": "Alice", "ledId": 1, "ip": "192.168.1.15" }
 app.post('/api/register', async (req, res) => {
-    const { name, ledId, ip } = req.body;
+    const { name, ledId, ip, discordId } = req.body;
     await performBackgroundScan();
 
     // This will be the Public IP if they are on the internet.
@@ -301,7 +334,14 @@ app.post('/api/register', async (req, res) => {
         return res.status(400).json({ error: "MAC address cannot be identified." });
     }
 
-    await updateUserRegister(name, ledId, finalMac, res);
+    if (discordId !== undefined && discordId !== null && discordId !== '') {
+        if (!normalizeDiscordId(discordId)) {
+            console.error(`[${new Date().toISOString()}] Invalid discordId`);
+            return res.status(400).json({ error: "Invalid discordId (use numeric snowflake)" });
+        }
+    }
+
+    await updateUserRegister(name, ledId, finalMac, res, discordId);
 });
 
 // 2. Extended Device Scan Endpoint
@@ -327,7 +367,10 @@ app.get('/api/devices', async (req, res) => {
                     : null,
                 scanIntervalSeconds: SCAN_INTERVAL_MS / 1000,
                 scansPerWindow: SCANS_PER_WINDOW,
-                presenceThreshold: PRESENCE_THRESHOLD
+                presenceThreshold: PRESENCE_THRESHOLD,
+                discordRoleSync: discordMirror.isDiscordRoleSyncEnabled(),
+                atHilabRoleId: discordMirror.getDiscordMeta().atHilabRoleId,
+                atHilabRoleName: discordMirror.getDiscordMeta().atHilabRoleName
             },
             count: results.length,
             activeUsers,
@@ -345,9 +388,15 @@ loadUserRegistry().finally(() => {
         console.log(`Registered users: ${userRegistry.length}`);
         if (userRegistry.length > 0 && LOG_PRESENCE) {
             for (const user of userRegistry) {
-                console.log(`  - ${user.name} (LED ${user.ledId}, MAC ${user.mac})`);
+                console.log(
+                    `  - ${user.name} (LED ${user.ledId}, MAC ${user.mac}` +
+                    `${user.discordId ? `, Discord ${user.discordId}` : ''})`
+                );
             }
         }
+        discordMirror.startDiscordPresenceBot(() =>
+            discordMirror.syncDiscordRolesFromLanPresence(userRegistry, presenceHistory, isUserPresent, normalizeDiscordId)
+        );
         startBackgroundScanner();
     });
 });
