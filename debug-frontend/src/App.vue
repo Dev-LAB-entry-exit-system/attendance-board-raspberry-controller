@@ -7,6 +7,7 @@ const isFormVisible = ref(false)
 const username = ref('');
 const ledId = ref('');
 const ipAddress = ref('');
+const discordId = ref('');
 const statusMessage = ref('');
 const isError = ref(false);
 
@@ -31,6 +32,10 @@ async function registerDevice() {
     name: username.value,
     ledId: Number(ledId.value),
   };
+
+  if (discordId.value.trim() !== '') {
+    payload.discordId = discordId.value;
+  }
 
   if (ipAddress.value.trim() !== '') {
     payload.ip = ipAddress.value.trim();
@@ -58,6 +63,7 @@ async function registerDevice() {
     username.value = '';
     ledId.value = '';
     ipAddress.value = '';
+    discordId.value = '';
 
     // Hide the form after a short delay so the user sees the success message
     setTimeout(() => {
@@ -80,6 +86,7 @@ function cancelForm() {
   username.value = '';
   ledId.value = '';
   ipAddress.value = '';
+  discordId.value = '';
 }
 
 onMounted(() => {
@@ -150,6 +157,19 @@ onUnmounted(() => {
                    min="0"
                    max="100"
                    step="1"
+                   class="card-field"
+            >
+            <br>
+            <span class="field-head">
+            <label for="discordId">Discord ID</label>
+          </span>
+            <input type="text"
+                   id="discordId"
+                   v-model="discordId"
+                   name="discordId"
+                   placeholder="012345678901234567"
+                   minlength="18"
+                   maxlength="18"
                    class="card-field"
             >
             <br>
