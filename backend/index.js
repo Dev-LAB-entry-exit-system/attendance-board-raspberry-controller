@@ -53,10 +53,10 @@ async function saveUserRegistry() {
 }
 
 async function updateUserRegister(name, ledId, mac, res) {
-    // 1. Delete any existing user that has this exact ledId
+    // Delete any existing user that has this exact ledId
     userRegistry = userRegistry.filter(user => user.ledId !== ledId);
 
-    // Update if IP already exists, otherwise add new
+    // Update if MAC already exists, otherwise add new
     const normalizedMac = mac.toLowerCase();
     const index = userRegistry.findIndex(u => u.mac === normalizedMac);
     if (index !== -1) {
@@ -73,11 +73,11 @@ async function updateUserRegister(name, ledId, mac, res) {
     }
 }
 
-async function updateLocalDevicesList() {
+async function fetchLocalDevicesList(force = false) {
     const currentTime = Date.now();
 
     // Check if cache is expired or empty
-    if (currentTime - lastScanTime > CACHE_TTL_MS || deviceCache.length === 0) {
+    if (currentTime - lastScanTime > CACHE_TTL_MS || deviceCache.length === 0 || force) {
         deviceCache = await findLocalDevices();
         lastScanTime = currentTime;
         console.log(`[${new Date().toISOString()}] Performed fresh network scan.`);
@@ -86,8 +86,8 @@ async function updateLocalDevicesList() {
     return false;
 }
 
-async function getDeviceList () {
-    await updateLocalDevicesList();
+async function getLocalDeviceList () {
+    await fetchLocalDevicesList();
 
     // Map through discovered devices and "attach" user info if a match is found
     return deviceCache.map(device => {
@@ -108,7 +108,7 @@ function getIP(req) {
 }
 
 async function getMac(ip) {
-    const devices = await getDeviceList();
+    const devices = await getLocalDeviceList();
 
     const index = devices.findIndex(device => device.ip === ip);
     if (index !== -1) {
@@ -122,6 +122,7 @@ async function getMac(ip) {
 // POST: { "name": "Alice", "ledId": 1, "ip": "192.168.1.15" }
 app.post('/api/register', async (req, res) => {
     const { name, ledId, ip } = req.body;
+    await fetchLocalDevicesList(true);
 
     // This will be the Public IP if they are on the internet.
     // It will be the Private IP if they are on the same WiFi as the server.
@@ -152,11 +153,11 @@ app.post('/api/register', async (req, res) => {
 app.get('/api/devices', async (req, res) => {
     try {
         const currentTime = Date.now();
-        let fromCache = !(await updateLocalDevicesList());
+        let fromCache = !(await fetchLocalDevicesList());
 
         console.log(`[${new Date().toISOString()}] GET from:`, getIP(req));
 
-        const results =  await getDeviceList();
+        const results =  await getLocalDeviceList();
 
         res.json({
             meta: {
@@ -174,5 +175,5 @@ app.get('/api/devices', async (req, res) => {
 });
 
 loadUserRegistry().finally(() => {
-    app.listen(PORT, () => console.log(`[${new Date().toISOString()}] Scanner running on port ${PORT}`));
+    app.listen(PORT, () => console.log(`Scanner running on port ${PORT}`));
 });
