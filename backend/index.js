@@ -26,6 +26,9 @@ app.set('trust proxy', true);
 // In-memory storage for our users (persisted to users.json)
 // Format: { name: String, ledId: Number, ip: String }
 let userRegistry = [];
+let deviceCache = [];
+let lastScanTime = 0;
+const CACHE_TTL_MS = 30 * 1000; // 30 seconds
 
 async function loadUserRegistry() {
     try {
@@ -49,16 +52,17 @@ async function saveUserRegistry() {
     await fs.writeFile(REGISTRY_FILE, JSON.stringify(userRegistry, null, 2), 'utf8');
 }
 
-async function updateUserRegister(name, ledId, ip, res) {
-    // 1. Delete any existing user that has this exact ledId
+async function updateUserRegister(name, ledId, mac, res) {
+    // Delete any existing user that has this exact ledId
     userRegistry = userRegistry.filter(user => user.ledId !== ledId);
 
-    // Update if IP already exists, otherwise add new
-    const index = userRegistry.findIndex(u => u.ip === ip);
+    // Update if MAC already exists, otherwise add new
+    const normalizedMac = mac.toLowerCase();
+    const index = userRegistry.findIndex(u => u.mac === normalizedMac);
     if (index !== -1) {
-        userRegistry[index] = { name, ledId, ip: ip };
+        userRegistry[index] = { name, ledId, mac: normalizedMac };
     } else {
-        userRegistry.push({ name, ledId, ip: ip });
+        userRegistry.push({ name, ledId, mac: normalizedMac });
     }
 
     try {
@@ -69,61 +73,103 @@ async function updateUserRegister(name, ledId, ip, res) {
     }
 }
 
+async function fetchLocalDevicesList(force = false) {
+    const currentTime = Date.now();
+
+    // Check if cache is expired or empty
+    if (currentTime - lastScanTime > CACHE_TTL_MS || deviceCache.length === 0 || force) {
+        deviceCache = await findLocalDevices();
+        lastScanTime = currentTime;
+        console.log(`[${new Date().toISOString()}] Performed fresh network scan.`);
+        return true;
+    }
+    return false;
+}
+
+async function getLocalDeviceList () {
+    await fetchLocalDevicesList();
+
+    // Map through discovered devices and "attach" user info if a match is found
+    return deviceCache.map(device => {
+        const normalizedDeviceMac = device.mac.toLowerCase();
+        const user = userRegistry.find(u => u.mac === normalizedDeviceMac);
+        return {
+            ip: device.ip,
+            mac: device.mac,
+            name: user ? user.name : "Unknown",
+            ledId: user ? user.ledId : null,
+            isRegistered: !!user
+        };
+    });
+}
+
 function getIP(req) {
     return (req.ip || req.socket.remoteAddress).replace('::ffff:', '');
+}
+
+async function getMac(ip) {
+    const devices = await getLocalDeviceList();
+
+    const index = devices.findIndex(device => device.ip === ip);
+    if (index !== -1) {
+        return devices[index].mac.toLowerCase();
+    } else {
+        return null;
+    }
 }
 
 // 1. Registration Endpoint
 // POST: { "name": "Alice", "ledId": 1, "ip": "192.168.1.15" }
 app.post('/api/register', async (req, res) => {
     const { name, ledId, ip } = req.body;
+    await fetchLocalDevicesList(true);
 
     // This will be the Public IP if they are on the internet.
     // It will be the Private IP if they are on the same WiFi as the server.
     const clientIp = getIP(req);
-    console.log('POST from:', clientIp);
+    console.log(`[${new Date().toISOString()}] POST from:`, clientIp);
 
     const finalIpAddress = ip ? ip : clientIp;
 
     if (!name || ledId === undefined || !finalIpAddress) {
-        console.error('Missing name, ledId or ip address', name, ledId, ip);
+        console.error(`[${new Date().toISOString()}] Missing name, ledId or ip address`, name, ledId, ip);
         return res.status(400).json({ error: "Missing required fields: name, ledId, or ip" });
     } else if (net.isIP(finalIpAddress) !== 4) {
-        console.error('Invalid ip address');
+        console.error(`[${new Date().toISOString()}] Invalid ip address`);
         return res.status(400).json({ error: "Invalid IP address format provided." });
     }
 
-    await updateUserRegister(name, ledId, finalIpAddress, res);
+    const finalMac = await getMac(finalIpAddress);
+
+    if (!finalMac) {
+        console.error(`[${new Date().toISOString()}] Could not identify MAC address for IP:`, finalIpAddress);
+        return res.status(400).json({ error: "MAC address cannot be identified." });
+    }
+
+    await updateUserRegister(name, ledId, finalMac, res);
 });
 
 // 2. Extended Device Scan Endpoint
 app.get('/api/devices', async (req, res) => {
     try {
-        const discoveredDevices = await findLocalDevices();
+        const currentTime = Date.now();
+        let fromCache = !(await fetchLocalDevicesList());
 
-        // This will be the Public IP if they are on the internet.
-        // It will be the Private IP if they are on the same WiFi as the server.
-        const clientIp = (req.ip || req.socket.remoteAddress).replace('::ffff:', '');
-        console.log('GET from:', clientIp);
+        console.log(`[${new Date().toISOString()}] GET from:`, getIP(req));
 
-        // Map through discovered devices and "attach" user info if a match is found
-        const results = discoveredDevices.map(device => {
-            const user = userRegistry.find(u => u.ip === device.ip);
-            return {
-                ip: device.ip,
-                mac: device.mac,
-                name: user ? user.name : "Unknown",
-                ledId: user ? user.ledId : null,
-                isRegistered: !!user
-            };
-        });
+        const results =  await getLocalDeviceList();
 
         res.json({
+            meta: {
+                fromCache,
+                cacheAgeSeconds: Math.round((currentTime - lastScanTime) / 1000)
+            },
             count: results.length,
             activeUsers: results.filter(d => d.isRegistered),
             allDevices: results
         });
     } catch (error) {
+        console.error(`[${new Date().toISOString()}] Scan failed:`, error);
         res.status(500).json({ error: "Scan failed" });
     }
 });
