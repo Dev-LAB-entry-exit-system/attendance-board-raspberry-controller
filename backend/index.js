@@ -8,6 +8,9 @@ const net = require('net');
 const cors = require('cors');
 const discordMirror = require('./discord');
 
+// Import the LED control function from led_controller.js
+const { updateLeds } = require('./led_controller');
+
 const app = express();
 const PORT = 3000;
 const REGISTRY_FILE = path.join(__dirname, 'users.json');
@@ -229,6 +232,11 @@ async function performBackgroundScan() {
         recordScanPresence(deviceCache.map(device => device.mac));
         logPresenceToConsole();
         await discordMirror.syncDiscordRolesFromLanPresence(userRegistry, presenceHistory, isUserPresent, normalizeDiscordId);
+
+        const activeUsers = getActiveUsers();
+        const activeLedIds = [...new Set(activeUsers.map(u => u.ledId).filter(id => id !== null && id !== undefined))];
+        updateLeds(activeLedIds, LOG_PRESENCE);
+
         return true;
     } catch (error) {
         console.error(`[${new Date().toISOString()}] Background scan failed:`, error);
