@@ -154,6 +154,7 @@ onUnmounted(() => {
                 class="card-field"
               >
                 <option disabled value="">選択してください</option>
+                <option value="-1"> -1 (for delete) </option>
                 <!-- 15回ループして0から14までの選択肢を自動生成します -->
                 <option v-for="n in 15" :key="n-1" :value="n-1">
                   LED {{ n - 1 }}
