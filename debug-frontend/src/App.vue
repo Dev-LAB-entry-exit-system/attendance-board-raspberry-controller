@@ -111,8 +111,7 @@ onUnmounted(() => {
              :key="user.ip">
           <p class="center mini-title"><strong>{{ user.name }}</strong></p>
           <p><span class="field-head">LED-ID: </span><span class="inline-listing">{{ user.ledId }}</span></p>
-          <p><span class="field-head">IP: </span><span class="inline-listing">{{ user.ip }}</span></p>
-          <p><span class="field-head">MAC: </span><span class="inline-listing">{{ user.mac }}</span></p>
+          <p><span class="field-head">Discord-ID: </span><span class="inline-listing">{{ user.discordId }}</span></p>
         </div>
         <div class="card">
           <button
@@ -146,19 +145,20 @@ onUnmounted(() => {
             />
             <br>
             <span class="field-head">
-            <label for="ledId">LED-ID* </label>
-          </span>
-            <input type="number"
-                   id="ledId"
-                   v-model="ledId"
-                   name="ledId"
-                   placeholder="LED ID of Your Seat"
-                   required
-                   min="0"
-                   max="100"
-                   step="1"
-                   class="card-field"
-            >
+              <label for="ledId">LED-ID* </label>
+            </span>
+              <select id="ledId"
+                v-model="ledId"
+                name="ledId"
+                required
+                class="card-field"
+              >
+                <option disabled value="">選択してください</option>
+                <!-- 15回ループして0から14までの選択肢を自動生成します -->
+                <option v-for="n in 15" :key="n-1" :value="n-1">
+                  LED {{ n - 1 }}
+                </option>
+              </select>
             <br>
             <span class="field-head">
             <label for="discordId">Discord ID</label>
@@ -212,15 +212,23 @@ onUnmounted(() => {
       </p>
     </div>
 
-    <div class="section">
+   <div class="section">
       <h2>Network Device Scan Output</h2>
       <div class="full-width" v-if="scanResults.length > 0">
-        <div v-for="device in scanResults"
-             :key="device.ip">
-          <p class="inline-listing"><span v-if="device.ledId != null"><{{ device.ledId }}> </span>{{ device.name }} |
-            <span style="display: inline-block; width: 8em;">{{ device.ip }}</span> | {{ device.mac }} |
-            isRegistered:{{ device.isRegistered }}</p>
+        
+        <!-- 1. 登録済みユーザーのみを抽出して名前とLED IDを表示 -->
+        <div v-for="(device, index) in scanResults.filter(d => d.isRegistered)"
+             :key="'reg-' + index">
+          <p class="inline-listing">
+            <span v-if="device.ledId != null"><{{ device.ledId }}> </span>{{ device.name }}
+          </p>
         </div>
+
+        <!-- 2. 未登録（Unknown）端末は「数」だけをカウントして表示 -->
+        <p class="inline-listing" style="margin-top: 1em; color: gray;">
+          Unknown Devices detected: {{ scanResults.filter(d => !d.isRegistered).length }}
+        </p>
+
       </div>
       <p v-else>
         No scan results.
@@ -287,11 +295,11 @@ h1 {
 
   .field-head {
     display: inline-block;
-    min-width: 5em;
+    min-width: 6em;
   }
 
   .card-field {
-    width: 65%;
+    width: 60%;
     font-family: "JetBrains Mono", sans-serif;
   }
 

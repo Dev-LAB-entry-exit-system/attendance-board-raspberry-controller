@@ -264,8 +264,8 @@ function getLocalDeviceList() {
         const user = userRegistry.find(u => normalizeMac(u.mac) === normalizedDeviceMac);
         const registered = !!user;
         return {
-            ip: device.ip,
-            mac: device.mac,
+            // ip: device.ip,
+            // mac: device.mac,
             name: user ? user.name : "Unknown",
             ledId: user ? user.ledId : null,
             isRegistered: registered,
@@ -288,9 +288,9 @@ function getActiveUsers() {
             return {
                 name: user.name,
                 ledId: user.ledId,
-                mac: user.mac,
+                // mac: user.mac,
                 discordId: user.discordId || null,
-                ip: device ? device.ip : null,
+                // ip: device ? device.ip : null,
                 presenceSource: 'lan',
                 presenceHits: history.filter(Boolean).length,
                 presenceScans: history.length,
