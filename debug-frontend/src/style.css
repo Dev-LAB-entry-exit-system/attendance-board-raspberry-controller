@@ -53,6 +53,23 @@
   }
 }
 
+::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: grey;
+  border-radius: 10px;
+  border: 5px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 body, main, header, footer, nav, div, h1, h2, span, p, a, span, strong {
   transition: all 0.7s ease;
 }

@@ -4,6 +4,7 @@ import {ref, onMounted, onUnmounted} from 'vue'
 const activeUsers = ref([])
 const scanResults = ref([])
 const isFormVisible = ref(false)
+const isTutorialVisible = ref(true)
 const username = ref('');
 const ledId = ref('');
 const ipAddress = ref('');
@@ -89,9 +90,22 @@ function cancelForm() {
   discordId.value = '';
 }
 
+function closeTutorial() {
+  const tutorial = document.getElementById('tutorial');
+  tutorial.classList.add('deactivated');
+
+  setTimeout(() => {
+    isTutorialVisible.value = false;
+  }, 1000)
+}
+
 onMounted(() => {
   fetchDevices()
   intervalId = setInterval(fetchDevices, UPDATE_INTERVAL)
+  setTimeout(() => {
+    const tutorial = document.getElementById('tutorial');
+    tutorial.classList.remove('deactivated');
+  },1000)
 })
 
 onUnmounted(() => {
@@ -103,14 +117,44 @@ onUnmounted(() => {
   <div class="container">
     <h1 class="page-title">Attendance Board</h1>
 
-    <div class="overlay-canvas">
+    <div id="tutorial" class="overlay-canvas hide-on-desktop deactivated" v-if="isTutorialVisible">
       <div class="scrollable-container">
+        <button
+            class="close-overlay"
+            v-if="isTutorialVisible"
+            @click="closeTutorial()"
+            aria-label="Close Tutorial"
+        >
+          <svg viewBox="0 0 23 20" width="3em" height="3em" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
         <div class="mobile-tutorial">
           <h2><strong>登録前に<br>Before Registration</strong></h2>
           <h3>Wi-Fi経由でのデバイス検出を許可する<br>Allow Device Detection through WIFI</h3>
           <p>プライベートWi-Fiアドレス/MACアドレスを静的に変更する<br>Switch Private WIFI Address / Device MAC to static</p>
           <div class="tutorial-step">
             <p><strong>Step 1</strong></p>
+            <p>研究室のWi-Fi(hilab2ghz)に接続<br>Go to WIFI for hilab2ghz or/and hilab5ghz settings</p>
+            <img class="tutorial-picture" src="./assets/screenshot-1.jpg" alt="Screenshot of WIFI Settings page.">
+          </div>
+          <div class="tutorial-step">
+            <p><strong>Step 2</strong></p>
+            <p>「プライベートWi-Fiアドレス」の設定に移動して<br>Go to "Private WIFI Address" settings</p>
+            <img class="tutorial-picture" src="./assets/screenshot-2.jpg" alt="Screenshot of settings page for hilab2ghz.">
+          </div>
+          <div class="tutorial-step">
+            <p><strong>Step 3</strong></p>
+            <p>プライベートWi-Fiアドレスをオフにします<br>Set WIFI Address to "Fixed"</p>
+            <img class="tutorial-picture" src="./assets/screenshot-3.jpg" alt="Screenshot WIFI privacy settings.">
+          </div>
+          <div class="tutorial-step">
+            <p><strong>Step 4</strong></p>
+            <p>このチュートリアルウィンドウを閉じて、デバイスを登録してください。<br>Close this tutorial window and register your device.</p>
+          </div>
+          <div class="tutorial-step">
+            <p><strong>問題が発生した場合は、システム管理者にご連絡ください。<br>If you have any trouble, please contact the system administrator.</strong></p>
           </div>
 
         </div>
@@ -259,24 +303,99 @@ onUnmounted(() => {
 
 .overlay-canvas {
   position: fixed;
-  top: 10vh;
-  max-width: 100%;
-  max-height: 80vh;
-  padding: 3vw;
+  top: 3vh;
+  left: 2vw;
+  width: 96vw;
+  height: 94vh;
   background-color: rgba(0,0,0,0.1);
   backdrop-filter: blur(10px);
   border-radius: 15px;
   box-shadow: 3px 3px 20px 3px rgba(0,0,0,0.3);
+}
 
+.overlay-canvas.deactivated {
+  opacity: 0;
+  height: 0;
+}
+
+.hide-on-desktop {
+  display: none;
+  visibility: hidden;
+  @media (max-width: 1024px) {
+    display: block;
+    visibility: visible;
+  }
+}
+
+.hide-on-mobile {
+  display: block;
+  visibility: visible;
+  @media (max-width: 1024px) {
+    display: none;
+    visibility: hidden;
+  }
 }
 
 .scrollable-container {
-  overflow-y: scroll;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
   height: 100%;
+  pointer-events: auto;
 }
 
 .mobile-tutorial {
-  padding: 3em 2vw;
+  position: absolute;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 5em 0;
+
+  h2, h3, p {
+    margin: 0.5em;
+  }
+}
+
+.tutorial-step {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 1em;
+  margin: 1em;
+}
+
+.tutorial-picture {
+  max-width: 100%;
+  max-height: 50vh;
+  border-radius: 15px;
+  margin: 1em;
+}
+
+.close-overlay {
+  position: fixed;
+  z-index: 1000;
+  top: 30px;
+  right: 50px;
+  height: 3vh;
+  width: 3vh;
+  border-radius: 2vh;
+  background-color: rgba(0,0,0,0.0);
+  box-shadow: 0 0 0 0;
+
+  svg line {
+    box-shadow: 3px 3px 20px 3px rgba(0,0,0,0.3);
+  }
+
+  :hover {
+    transform: scale(1.1);
+    transition: all 0.3s ease;
+  }
 }
 
 .section {
@@ -414,6 +533,8 @@ li {
 
 .hidden {
   display: none;
+  width: 0;
+  height: 0;
   visibility: hidden;
 }
 </style>
