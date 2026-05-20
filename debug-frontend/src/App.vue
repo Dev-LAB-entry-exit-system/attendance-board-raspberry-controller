@@ -103,6 +103,20 @@ onUnmounted(() => {
   <div class="container">
     <h1 class="page-title">Attendance Board</h1>
 
+    <div class="overlay-canvas">
+      <div class="scrollable-container">
+        <div class="mobile-tutorial">
+          <h2><strong>登録前に<br>Before Registration</strong></h2>
+          <h3>Wi-Fi経由でのデバイス検出を許可する<br>Allow Device Detection through WIFI</h3>
+          <p>プライベートWi-Fiアドレス/MACアドレスを静的に変更する<br>Switch Private WIFI Address / Device MAC to static</p>
+          <div class="tutorial-step">
+            <p><strong>Step 1</strong></p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
     <div class="section">
       <h2>Active Users</h2>
       <div class="user-display">
@@ -241,6 +255,28 @@ onUnmounted(() => {
     padding-left: 1em;
     padding-right: 1em;
   }
+}
+
+.overlay-canvas {
+  position: fixed;
+  top: 10vh;
+  max-width: 100%;
+  max-height: 80vh;
+  padding: 3vw;
+  background-color: rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  box-shadow: 3px 3px 20px 3px rgba(0,0,0,0.3);
+
+}
+
+.scrollable-container {
+  overflow-y: scroll;
+  height: 100%;
+}
+
+.mobile-tutorial {
+  padding: 3em 2vw;
 }
 
 .section {

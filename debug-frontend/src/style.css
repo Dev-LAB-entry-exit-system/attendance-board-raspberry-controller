@@ -62,7 +62,8 @@ body {
 }
 
 h1,
-h2 {
+h2,
+h3 {
   font-family: var(--heading), sans-serif;
   font-weight: 500;
   color: var(--text-h);
@@ -81,9 +82,18 @@ h2 {
   font-size: 24px;
   line-height: 118%;
   letter-spacing: -0.24px;
-  margin: 0 0 8px;
+  margin: 0 0 20px;
   @media (max-width: 1024px) {
     font-size: 20px;
+  }
+}
+h3 {
+  font-size: 20px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 14px;
+  @media (max-width: 1024px) {
+    font-size: 18px;
   }
 }
 p {
