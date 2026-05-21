@@ -204,7 +204,8 @@ onUnmounted(() => {
              :key="user.ip">
           <p class="center mini-title"><strong>{{ user.name }}</strong></p>
           <p><span class="field-head">LED-ID: </span><span class="inline-listing">{{ user.ledId }}</span></p>
-          <p><span class="field-head">Discord-ID: </span><span class="inline-listing">{{ user.discordId }}</span></p>
+          <p><span class="field-head">Discord: </span><span class="inline-listing">{{ user.discordId ? "connected" : "N/A" }}</span></p>
+          <p><span class="field-head">Status: </span><span class="inline-listing">{{ user.ip ? "in room" : "away" }}</span></p>
         </div>
         <div class="card">
           <button
