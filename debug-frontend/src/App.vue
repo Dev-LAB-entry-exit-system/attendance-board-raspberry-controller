@@ -8,6 +8,7 @@ const isTutorialVisible = ref(true)
 const username = ref('');
 const ledId = ref('');
 const ipAddress = ref('');
+const ipAddressPlaceholder = ref('auto-detect');
 const discordId = ref('');
 const statusMessage = ref('');
 const isError = ref(false);
@@ -24,6 +25,22 @@ const fetchDevices = async () => {
     activeUsers.value = data.activeUsers
   } catch (error) {
     console.error('Failed to fetch devices:', error)
+  }
+}
+
+async function isClientRegistered() {
+  try {
+    const response = await fetch('/api/whoami');
+    const data = await response.json();
+
+    if (response.status !== 200 || !data) {
+      ipAddressPlaceholder.value = "unable to detect IP";
+      return null;
+    }
+
+    return data.isRegistered;
+  } catch (error) {
+    console.error('Failed to fetch device information:', error);
   }
 }
 
@@ -90,6 +107,15 @@ function cancelForm() {
   discordId.value = '';
 }
 
+function openTutorial() {
+    isTutorialVisible.value = true;
+
+  setTimeout(() => {
+    const tutorial = document.getElementById('tutorial');
+    tutorial.classList.remove('deactivated');
+  }, 1000)
+}
+
 function closeTutorial() {
   const tutorial = document.getElementById('tutorial');
   tutorial.classList.add('deactivated');
@@ -99,13 +125,17 @@ function closeTutorial() {
   }, 1000)
 }
 
+async function loadTutorial() {
+  const clientIsRegistered = await isClientRegistered();
+  if (clientIsRegistered !== null && !clientIsRegistered) {
+    openTutorial();
+  }
+}
+
 onMounted(() => {
   fetchDevices()
+  loadTutorial()
   intervalId = setInterval(fetchDevices, UPDATE_INTERVAL)
-  setTimeout(() => {
-    const tutorial = document.getElementById('tutorial');
-    tutorial.classList.remove('deactivated');
-  },1000)
 })
 
 onUnmounted(() => {
@@ -197,7 +227,7 @@ onUnmounted(() => {
                    name="username"
                    placeholder="Enter Your Name"
                    required
-                   minlength="3"
+                   minlength="2"
                    maxlength="255"
                    class="card-field"
             />
@@ -205,19 +235,31 @@ onUnmounted(() => {
             <span class="field-head">
               <label for="ledId">LED-ID* </label>
             </span>
-              <select id="ledId"
-                v-model="ledId"
-                name="ledId"
-                required
-                class="card-field"
-              >
-                <option disabled value="">選択してください</option>
-                <option value="-1"> -1 (for delete) </option>
-                <!-- 15回ループして0から14までの選択肢を自動生成します -->
-                <option v-for="n in 15" :key="n-1" :value="n-1">
-                  LED {{ n - 1 }}
-                </option>
-              </select>
+            <select id="ledId"
+              v-model="ledId"
+              name="ledId"
+              required
+              class="card-field"
+            >
+              <option disabled value="">選択してください</option>
+              <option value="-1"> -1 (for delete) </option>
+              <!-- 15回ループして0から14までの選択肢を自動生成します -->
+              <option v-for="n in 15" :key="n-1" :value="n-1">
+                LED {{ n - 1 }}
+              </option>
+            </select>
+            <br>
+            <span class="field-head">
+            <label for="ipAddress">Local IP</label>
+          </span>
+            <input type="text"
+                   id="ipAddress"
+                   v-model="ipAddress"
+                   name="ipAddress"
+                   :placeholder=ipAddressPlaceholder
+                   maxlength="15"
+                   class="card-field"
+            >
             <br>
             <span class="field-head">
             <label for="discordId">Discord ID</label>
@@ -229,18 +271,6 @@ onUnmounted(() => {
                    placeholder="012345678901234567"
                    minlength="17"
                    maxlength="19"
-                   class="card-field"
-            >
-            <br>
-            <span class="field-head">
-            <label for="ipAddress">Local IP</label>
-          </span>
-            <input type="text"
-                   id="ipAddress"
-                   v-model="ipAddress"
-                   name="ipAddress"
-                   placeholder="auto-detect"
-                   maxlength="15"
                    class="card-field"
             >
             <div class="submit-container">
@@ -257,13 +287,13 @@ onUnmounted(() => {
                 Cancel
               </button>
             </div>
+            <p class="text-center"
+               v-if="statusMessage"
+               :class="{ 'error-text': isError, 'success-text': !isError }"
+            >
+              <strong>{{ statusMessage }}</strong>
+            </p>
           </form>
-          <p class="text-center"
-             v-if="statusMessage"
-             :class="{ 'error-text': isError, 'success-text': !isError }"
-          >
-            <strong>{{ statusMessage }}</strong>
-          </p>
         </div>
       </div>
       <p v-if="activeUsers.length === 0">
@@ -271,7 +301,7 @@ onUnmounted(() => {
       </p>
     </div>
 
-   <div class="section">
+   <div class="section hide-on-mobile">
       <h2>Network Device Scan Output</h2>
       <div class="full-width" v-if="scanResults.length > 0">
         
@@ -337,11 +367,11 @@ onUnmounted(() => {
 }
 
 .hide-on-mobile {
-  display: block;
-  visibility: visible;
-  @media (max-width: 1024px) {
-    display: none;
-    visibility: hidden;
+  display: none;
+  visibility: hidden;
+  @media (min-width: 1024px) {
+    display: block;
+    visibility: visible;
   }
 }
 
@@ -423,6 +453,13 @@ onUnmounted(() => {
   display: flex;
   text-align: center;
   justify-content: center;
+}
+
+.text-center {
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 .mini-title {

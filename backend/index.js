@@ -317,39 +317,42 @@ async function getMac(ip) {
 // 1. Registration Endpoint
 // POST: { "name": "Alice", "ledId": 1, "ip": "192.168.1.15" }
 app.post('/api/register', async (req, res) => {
-    const { name, ledId, ip, discordId } = req.body;
-    await performBackgroundScan();
+    try {
+        const {name, ledId, ip, discordId} = req.body;
+        await performBackgroundScan();
 
-    // This will be the Public IP if they are on the internet.
-    // It will be the Private IP if they are on the same WiFi as the server.
-    const clientIp = getIP(req);
-    console.log(`[${new Date().toISOString()}] POST from:`, clientIp);
+        const clientIp = getIP(req);
+        console.log(`[${new Date().toISOString()}] POST /api/register from:`, clientIp);
 
-    const finalIpAddress = ip ? ip : clientIp;
+        const finalIpAddress = ip ? ip : clientIp;
 
-    if (!name || ledId === undefined || !finalIpAddress) {
-        console.error(`[${new Date().toISOString()}] Missing name, ledId or ip address`, name, ledId, ip);
-        return res.status(400).json({ error: "Missing required fields: name, ledId, or ip" });
-    } else if (net.isIP(finalIpAddress) !== 4) {
-        console.error(`[${new Date().toISOString()}] Invalid ip address`);
-        return res.status(400).json({ error: "Invalid IP address format provided." });
-    }
-
-    const finalMac = await getMac(finalIpAddress);
-
-    if (!finalMac) {
-        console.error(`[${new Date().toISOString()}] Could not identify MAC address for IP:`, finalIpAddress);
-        return res.status(400).json({ error: "MAC address cannot be identified." });
-    }
-
-    if (discordId !== undefined && discordId !== null && discordId !== '') {
-        if (!normalizeDiscordId(discordId)) {
-            console.error(`[${new Date().toISOString()}] Invalid discordId`);
-            return res.status(400).json({ error: "Invalid discordId (use numeric snowflake)" });
+        if (!name || ledId === undefined || !finalIpAddress) {
+            console.error(`[${new Date().toISOString()}] Missing name, ledId or ip address`, name, ledId, ip);
+            return res.status(400).json({error: "Missing required fields: name, ledId, or ip"});
+        } else if (net.isIP(finalIpAddress) !== 4) {
+            console.error(`[${new Date().toISOString()}] Invalid ip address`);
+            return res.status(400).json({error: "Invalid IP address format provided."});
         }
-    }
 
-    await updateUserRegister(name, ledId, finalMac, res, discordId);
+        const finalMac = await getMac(finalIpAddress);
+
+        if (!finalMac) {
+            console.error(`[${new Date().toISOString()}] Could not identify MAC address for IP:`, finalIpAddress);
+            return res.status(400).json({error: "MAC address cannot be identified."});
+        }
+
+        if (discordId !== undefined && discordId !== null && discordId !== '') {
+            if (!normalizeDiscordId(discordId)) {
+                console.error(`[${new Date().toISOString()}] Invalid discordId`);
+                return res.status(400).json({error: "Invalid discordId (use numeric snowflake)"});
+            }
+        }
+
+        await updateUserRegister(name, ledId, finalMac, res, discordId);
+    } catch (error) {
+        console.error(`[${new Date().toISOString()}] Registration failed critically:`, error);
+        res.status(500).json({ error: "Registration failed" });
+    }
 });
 
 // 2. Extended Device Scan Endpoint
@@ -387,6 +390,46 @@ app.get('/api/devices', async (req, res) => {
     } catch (error) {
         console.error(`[${new Date().toISOString()}] Scan failed:`, error);
         res.status(500).json({ error: "Scan failed" });
+    }
+});
+
+app.get('/api/whoami', async (req, res) => {
+    try {
+        await performBackgroundScan();
+
+        const clientIp = getIP(req);
+        console.log(`[${new Date().toISOString()}] GET /api/whoami from:`, clientIp);
+
+        if (net.isIP(clientIp) !== 4) {
+            console.error(`[${new Date().toISOString()}] Invalid ip address`);
+            return res.status(400).json({error: "Could not check IP address"});
+        }
+
+        const finalMac = await getMac(clientIp);
+
+        if (!finalMac) {
+            console.error(`[${new Date().toISOString()}] Could not identify MAC address for IP:`, clientIp);
+            return res.status(400).json({error: "Who am I check failed: MAC address cannot be identified."});
+        }
+
+        const index = userRegistry.findIndex(u => u.mac === finalMac);
+        let isRegistered = false;
+        let userResult = {};
+
+        if (index !== -1) {
+            isRegistered = true;
+            userResult = userRegistry[index];
+            userResult.ip = clientIp;
+        }
+
+        return res.status(200).json({
+            isRegistered,
+            user: userResult,
+            clientIp: clientIp
+        })
+    } catch (error) {
+        console.error(`[${new Date().toISOString()}] Who am I check failed:`, error);
+        res.status(500).json({ error: "Who am I check failed" });
     }
 });
 
