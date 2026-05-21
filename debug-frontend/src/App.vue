@@ -21,8 +21,10 @@ const fetchDevices = async () => {
     const response = await fetch('/api/devices')
     const data = await response.json()
 
+    let nonDeletedUsers = data.activeUsers.filter(user => user.ledId !== -1)
+
     scanResults.value = data.allDevices
-    activeUsers.value = data.activeUsers
+    activeUsers.value = nonDeletedUsers
   } catch (error) {
     console.error('Failed to fetch devices:', error)
   }
@@ -145,6 +147,9 @@ onUnmounted(() => {
 
 <template>
   <div class="container">
+    <div class="logo">
+      <img class="logo-image" src="./assets/hilab-logo-full.png" alt="Human Interface Laboratory Logo">
+    </div>
     <h1 class="page-title">Attendance Board</h1>
 
     <div id="tutorial" class="overlay-canvas hide-on-desktop deactivated" v-if="isTutorialVisible">
@@ -328,6 +333,14 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+
+.logo {
+  .logo-image {
+    width: 15vh;
+    height: auto;
+  }
+}
+
 .container {
   display: flex;
   flex-wrap: wrap;
