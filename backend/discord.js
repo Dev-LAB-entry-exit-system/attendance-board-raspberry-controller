@@ -7,6 +7,7 @@ const DISCORD_GUILD_ID = process.env.DISCORD_GUILD_ID;
 const DISCORD_AT_HILAB_ROLE_ID = process.env.DISCORD_AT_HILAB_ROLE_ID;
 const DISCORD_AT_HILAB_ROLE_NAME = process.env.DISCORD_AT_HILAB_ROLE_NAME || 'at HILab';
 const SCANS_PER_WINDOW = Number(process.env.SCANS_PER_WINDOW) || 6;
+const LOG_DEBUG = process.env.LOG_PRESENCE || false;
 
 let discordAtHilabRoleIdResolved = DISCORD_AT_HILAB_ROLE_ID || null;
 /** @type {Client | null} */
@@ -29,6 +30,9 @@ function getDiscordMeta() {
 }
 
 function logDiscordRoleDebugInfo(guild, member, targetRole) {
+    if (!LOG_DEBUG) {
+        return;
+    }
     const botMember = guild.members.me;
     if (!botMember) {
         console.error('Discord debug: bot member object not available');

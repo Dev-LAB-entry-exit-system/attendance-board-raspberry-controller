@@ -4,9 +4,11 @@ import {ref, onMounted, onUnmounted} from 'vue'
 const activeUsers = ref([])
 const scanResults = ref([])
 const isFormVisible = ref(false)
+const isTutorialVisible = ref(true)
 const username = ref('');
 const ledId = ref('');
 const ipAddress = ref('');
+const ipAddressPlaceholder = ref('auto-detect');
 const discordId = ref('');
 const statusMessage = ref('');
 const isError = ref(false);
@@ -23,6 +25,22 @@ const fetchDevices = async () => {
     activeUsers.value = data.activeUsers
   } catch (error) {
     console.error('Failed to fetch devices:', error)
+  }
+}
+
+async function isClientRegistered() {
+  try {
+    const response = await fetch('/api/whoami');
+    const data = await response.json();
+
+    if (response.status !== 200 || !data) {
+      ipAddressPlaceholder.value = "unable to detect IP";
+      return null;
+    }
+
+    return data.isRegistered;
+  } catch (error) {
+    console.error('Failed to fetch device information:', error);
   }
 }
 
@@ -89,8 +107,34 @@ function cancelForm() {
   discordId.value = '';
 }
 
+function openTutorial() {
+    isTutorialVisible.value = true;
+
+  setTimeout(() => {
+    const tutorial = document.getElementById('tutorial');
+    tutorial.classList.remove('deactivated');
+  }, 1000)
+}
+
+function closeTutorial() {
+  const tutorial = document.getElementById('tutorial');
+  tutorial.classList.add('deactivated');
+
+  setTimeout(() => {
+    isTutorialVisible.value = false;
+  }, 1000)
+}
+
+async function loadTutorial() {
+  const clientIsRegistered = await isClientRegistered();
+  if (clientIsRegistered !== null && !clientIsRegistered) {
+    openTutorial();
+  }
+}
+
 onMounted(() => {
   fetchDevices()
+  loadTutorial()
   intervalId = setInterval(fetchDevices, UPDATE_INTERVAL)
 })
 
@@ -102,6 +146,50 @@ onUnmounted(() => {
 <template>
   <div class="container">
     <h1 class="page-title">Attendance Board</h1>
+
+    <div id="tutorial" class="overlay-canvas hide-on-desktop deactivated" v-if="isTutorialVisible">
+      <div class="scrollable-container">
+        <button
+            class="close-overlay"
+            v-if="isTutorialVisible"
+            @click="closeTutorial()"
+            aria-label="Close Tutorial"
+        >
+          <svg viewBox="0 0 23 20" width="3em" height="3em" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <div class="mobile-tutorial">
+          <h2><strong>登録前に<br>Before Registration</strong></h2>
+          <h3>Wi-Fi経由でのデバイス検出を許可する<br>Allow Device Detection through WIFI</h3>
+          <p>プライベートWi-Fiアドレス/MACアドレスを静的に変更する<br>Switch Private WIFI Address / Device MAC to static</p>
+          <div class="tutorial-step">
+            <p><strong>Step 1</strong></p>
+            <p>研究室のWi-Fi(hilab2ghz)に接続<br>Go to WIFI for hilab2ghz or/and hilab5ghz settings</p>
+            <img class="tutorial-picture" src="./assets/screenshot-1.jpg" alt="Screenshot of WIFI Settings page.">
+          </div>
+          <div class="tutorial-step">
+            <p><strong>Step 2</strong></p>
+            <p>「プライベートWi-Fiアドレス」の設定に移動して<br>Go to "Private WIFI Address" settings</p>
+            <img class="tutorial-picture" src="./assets/screenshot-2.jpg" alt="Screenshot of settings page for hilab2ghz.">
+          </div>
+          <div class="tutorial-step">
+            <p><strong>Step 3</strong></p>
+            <p>プライベートWi-Fiアドレスをオフにします<br>Set WIFI Address to "Fixed"</p>
+            <img class="tutorial-picture" src="./assets/screenshot-3.jpg" alt="Screenshot WIFI privacy settings.">
+          </div>
+          <div class="tutorial-step">
+            <p><strong>Step 4</strong></p>
+            <p>このチュートリアルウィンドウを閉じて、デバイスを登録してください。<br>Close this tutorial window and register your device.</p>
+          </div>
+          <div class="tutorial-step">
+            <p><strong>問題が発生した場合は、システム管理者にご連絡ください。<br>If you have any trouble, please contact the system administrator.</strong></p>
+          </div>
+
+        </div>
+      </div>
+    </div>
 
     <div class="section">
       <h2>Active Users</h2>
@@ -139,7 +227,7 @@ onUnmounted(() => {
                    name="username"
                    placeholder="Enter Your Name"
                    required
-                   minlength="3"
+                   minlength="2"
                    maxlength="255"
                    class="card-field"
             />
@@ -147,19 +235,31 @@ onUnmounted(() => {
             <span class="field-head">
               <label for="ledId">LED-ID* </label>
             </span>
-              <select id="ledId"
-                v-model="ledId"
-                name="ledId"
-                required
-                class="card-field"
-              >
-                <option disabled value="">選択してください</option>
-                <option value="-1"> -1 (for delete) </option>
-                <!-- 15回ループして0から14までの選択肢を自動生成します -->
-                <option v-for="n in 15" :key="n-1" :value="n-1">
-                  LED {{ n - 1 }}
-                </option>
-              </select>
+            <select id="ledId"
+              v-model="ledId"
+              name="ledId"
+              required
+              class="card-field"
+            >
+              <option disabled value="">選択してください</option>
+              <option value="-1"> -1 (for delete) </option>
+              <!-- 15回ループして0から14までの選択肢を自動生成します -->
+              <option v-for="n in 15" :key="n-1" :value="n-1">
+                LED {{ n - 1 }}
+              </option>
+            </select>
+            <br>
+            <span class="field-head">
+            <label for="ipAddress">Local IP</label>
+          </span>
+            <input type="text"
+                   id="ipAddress"
+                   v-model="ipAddress"
+                   name="ipAddress"
+                   :placeholder=ipAddressPlaceholder
+                   maxlength="15"
+                   class="card-field"
+            >
             <br>
             <span class="field-head">
             <label for="discordId">Discord ID</label>
@@ -171,18 +271,6 @@ onUnmounted(() => {
                    placeholder="012345678901234567"
                    minlength="17"
                    maxlength="19"
-                   class="card-field"
-            >
-            <br>
-            <span class="field-head">
-            <label for="ipAddress">Local IP</label>
-          </span>
-            <input type="text"
-                   id="ipAddress"
-                   v-model="ipAddress"
-                   name="ipAddress"
-                   placeholder="auto-detect"
-                   maxlength="15"
                    class="card-field"
             >
             <div class="submit-container">
@@ -199,13 +287,13 @@ onUnmounted(() => {
                 Cancel
               </button>
             </div>
+            <p class="text-center"
+               v-if="statusMessage"
+               :class="{ 'error-text': isError, 'success-text': !isError }"
+            >
+              <strong>{{ statusMessage }}</strong>
+            </p>
           </form>
-          <p class="text-center"
-             v-if="statusMessage"
-             :class="{ 'error-text': isError, 'success-text': !isError }"
-          >
-            <strong>{{ statusMessage }}</strong>
-          </p>
         </div>
       </div>
       <p v-if="activeUsers.length === 0">
@@ -213,7 +301,7 @@ onUnmounted(() => {
       </p>
     </div>
 
-   <div class="section">
+   <div class="section hide-on-mobile">
       <h2>Network Device Scan Output</h2>
       <div class="full-width" v-if="scanResults.length > 0">
         
@@ -252,6 +340,103 @@ onUnmounted(() => {
   }
 }
 
+.overlay-canvas {
+  position: fixed;
+  top: 3vh;
+  left: 2vw;
+  width: 96vw;
+  height: 94vh;
+  background-color: rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  box-shadow: 3px 3px 20px 3px rgba(0,0,0,0.3);
+}
+
+.overlay-canvas.deactivated {
+  opacity: 0;
+  height: 0;
+}
+
+.hide-on-desktop {
+  display: none;
+  visibility: hidden;
+  @media (max-width: 1024px) {
+    display: block;
+    visibility: visible;
+  }
+}
+
+.hide-on-mobile {
+  display: none;
+  visibility: hidden;
+  @media (min-width: 1024px) {
+    display: block;
+    visibility: visible;
+  }
+}
+
+.scrollable-container {
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.mobile-tutorial {
+  position: absolute;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 5em 0;
+
+  h2, h3, p {
+    margin: 0.5em;
+  }
+}
+
+.tutorial-step {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 1em;
+  margin: 1em;
+}
+
+.tutorial-picture {
+  max-width: 100%;
+  max-height: 50vh;
+  border-radius: 15px;
+  margin: 1em;
+}
+
+.close-overlay {
+  position: fixed;
+  z-index: 1000;
+  top: 30px;
+  right: 50px;
+  height: 3vh;
+  width: 3vh;
+  border-radius: 2vh;
+  background-color: rgba(0,0,0,0.0);
+  box-shadow: 0 0 0 0;
+
+  svg line {
+    box-shadow: 3px 3px 20px 3px rgba(0,0,0,0.3);
+  }
+
+  :hover {
+    transform: scale(1.1);
+    transition: all 0.3s ease;
+  }
+}
+
 .section {
   padding-top: 2em;
   max-width: 100%; /* Change to 45% for two column layout on desktop.*/
@@ -268,6 +453,13 @@ onUnmounted(() => {
   display: flex;
   text-align: center;
   justify-content: center;
+}
+
+.text-center {
+  text-align: center;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
 }
 
 .mini-title {
@@ -387,6 +579,8 @@ li {
 
 .hidden {
   display: none;
+  width: 0;
+  height: 0;
   visibility: hidden;
 }
 </style>

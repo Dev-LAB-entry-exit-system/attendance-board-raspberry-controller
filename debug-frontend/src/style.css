@@ -53,6 +53,23 @@
   }
 }
 
+::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
+  overflow: hidden;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: grey;
+  border-radius: 10px;
+  border: 5px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 body, main, header, footer, nav, div, h1, h2, span, p, a, span, strong {
   transition: all 0.7s ease;
 }
@@ -62,7 +79,8 @@ body {
 }
 
 h1,
-h2 {
+h2,
+h3 {
   font-family: var(--heading), sans-serif;
   font-weight: 500;
   color: var(--text-h);
@@ -81,9 +99,18 @@ h2 {
   font-size: 24px;
   line-height: 118%;
   letter-spacing: -0.24px;
-  margin: 0 0 8px;
+  margin: 0 0 20px;
   @media (max-width: 1024px) {
     font-size: 20px;
+  }
+}
+h3 {
+  font-size: 20px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 14px;
+  @media (max-width: 1024px) {
+    font-size: 18px;
   }
 }
 p {
