@@ -181,7 +181,7 @@ onUnmounted(() => {
           </div>
           <div class="tutorial-step">
             <p><strong>Step 3</strong></p>
-            <p>プライベートWi-Fiアドレスをオフにします<br>Set WIFI Address to "Fixed"</p>
+            <p>プライベートWi-Fiアドレスをオフにします（Android端末の場合は、MACアドレスを「電話のMACアドレス」に設定してください。）<br>Set Private WIFI to "Off" (on Android, set MAC Address to "Phone MAC")</p>
             <img class="tutorial-picture" src="./assets/screenshot-3.jpg" alt="Screenshot WIFI privacy settings.">
           </div>
           <div class="tutorial-step">
