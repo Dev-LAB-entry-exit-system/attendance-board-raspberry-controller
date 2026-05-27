@@ -73,15 +73,10 @@ The Raspberry Pi scans devices on the local network, matches them with registere
 
 ### 1. Raspberry Pi access
 
-Raspberry Piのログイン情報:
-
-- ユーザーID: `procon_a`
-- パスワードは大小文字を含む12文字です
-
-Raspberry Piのターミナルに接続するには、以下のSSHコマンドを実行します。
+Raspberry Piのログイン情報
 
 ```bash
-ssh procon_a@172.16.0.61
+ssh [USER]@[LOCAL_ADDRESS]
 ```
 
 ### 2. Install Node.js
@@ -181,7 +176,7 @@ npm run dev
 After startup, open:
 
 ```text
-http://localhost:5173
+http://localhost:8080
 ```
 
 ---
@@ -206,6 +201,69 @@ http://localhost:3000/api/devices
 検出されたLAN内端末一覧を取得します。
 
 Returns the list of detected devices on the local network.
+
+Example Response
+```json
+{
+  "meta": {
+    "lastScanAgeSeconds": 19,
+    "scanIntervalSeconds": 30,
+    "scansPerWindow": 6,
+    "presenceThreshold": 2,
+    "discordRoleSync": true,
+    "atHilabRoleId": "00000000000000000000",
+    "atHilabRoleName": "at HILab"
+  },
+  "count": 2,
+  "activeUsers": [
+    {
+      "name": "Johanna Doey",
+      "ledId": 2,
+      "mac": "00:00:00:00:00:00",
+      "discordId": "000000000000000000",
+      "ip": "172.16.0.11",
+      "presenceSource": "lan",
+      "presenceHits": 6,
+      "presenceScans": 6,
+      "isPresent": true
+    }
+  ],
+  "allDevices": [
+    {
+      "ip": "172.16.0.11",
+      "mac": "00:00:00:00:00:00",
+      "name": "Johanna Dowy",
+      "ledId": 2,
+      "isRegistered": true,
+      "seenInLatestScan": true,
+      "isPresent": true,
+      "presenceSource": "lan",
+      "presenceHits": 6,
+      "presenceScans": 6
+    },
+    {
+      "ip": "172.16.0.21",
+      "mac": "ab:cd:ef:12:23:45",
+      "name": "Unknown",
+      "ledId": null,
+      "isRegistered": false,
+      "seenInLatestScan": true,
+      "isPresent": false,
+      "presenceSource": null,
+      "presenceHits": null,
+      "presenceScans": null
+    }
+  ]
+}
+```
+
+---
+
+### GET `/api/whoami`
+
+要求元のデバイスのIPアドレスと、デバイスが登録されている場合は登録済みユーザーを返します。
+
+Returns the IP address of the requesting device, and the registered user, if the device is registered.
 
 ---
 
