@@ -5,6 +5,20 @@
 
 The English version of the README is below.
 
+## 完成イメージ
+
+### 出席ボード（完成品）
+
+<img src="README-Images/Attendance%20Board.jpg" alt="出席ボード完成品" width="420" />
+
+LAN 在室判定に連動し、在室メンバーに対応する LED が点灯した状態です。
+
+### Discord ロール同期
+
+<img src="README-Images/Discord.jpg" alt="Discord ロール付与画面" width="420" />
+
+在室と判定されたユーザーに `at HILab` ロールが自動付与されている様子です。
+
 ---
 
 ## プロジェクト概要
@@ -78,6 +92,7 @@ Presence Judgment (history window + threshold)
 - **責務分離で保守性向上**: API/判定ロジック（`backend/index.js`）、Discord 同期（`backend/discord.js`）、GPIO 制御（`LED/led_controller.py`）を分離し、拡張しやすい構成にしています。
 - **運用時の観測性を確保**: `LOG_PRESENCE` で在室遷移・ヒット数・スキャン状態を詳細ログ化でき、現場でのチューニングやトラブルシュートを容易にしています。
 - **既存情報の保全**: ユーザー更新時に `discordId` を正規化しつつ既存値を保持する実装で、再登録時の情報欠落を防いでいます。
+- **チュートリアル整備による導入しやすさ**: セットアップ手順と環境変数を README に明示し、初見のメンバーでも再現・検証しやすいようにしています。
 
 ---
 
@@ -208,6 +223,20 @@ Request body 例:
 This project visualizes lab attendance using **LAN scanning + Raspberry Pi + physical LEDs**.  
 Presence status can also be mirrored to Discord roles to reflect who is currently in the lab.
 
+## Final Output Preview
+
+### Attendance board (finished product)
+
+<img src="README-Images/Attendance%20Board.jpg" alt="Attendance board" width="420" />
+
+LEDs light up for members detected as present on the LAN.
+
+### Discord role sync
+
+<img src="README-Images/Discord.jpg" alt="Discord role assignment" width="420" />
+
+The `at HILab` role is automatically assigned when a user is detected as present in the lab.
+
 ---
 
 ## Project Overview
@@ -281,6 +310,7 @@ Presence Judgment (history window + threshold)
 - **Modular design**: Separates API/presence logic, Discord sync, and GPIO control for maintainability and easier extension.
 - **Operational observability**: `LOG_PRESENCE` provides detailed logs for transitions, hit counts, and scan status, helping field debugging and tuning.
 - **Data preservation on updates**: Normalizes `discordId` while preserving existing values during re-registration.
+- **Onboarding-friendly tutorial flow**: Documents step-by-step setup and environment configuration in the README so new contributors can reproduce and validate the system quickly.
 
 ---
 
