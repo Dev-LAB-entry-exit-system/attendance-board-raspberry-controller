@@ -21,31 +21,7 @@ def init_led():
         # OUTに設定するだけで、初期状態(LOW)にはしないように変更
         # （毎回LOWにすると、すでに光っているLEDが一瞬消えてチラつくため）
         GPIO.setup(pin, GPIO.OUT)
-    
-    try:
-        # 一つずつ点灯
-        for pin in led_pins:
-            GPIO.output(pin, GPIO.HIGH)
-            time.sleep(0.5)
-            GPIO.output(pin, GPIO.LOW)
 
-        # 全点灯
-        for pin in led_pins:
-            GPIO.output(pin,GPIO.HIGH)
-
-        # 5秒間だけ点灯
-        time.sleep(5)
-
-        # 消灯
-        for pin in led_pins:
-            GPIO.output(pin,GPIO.LOW)
-    except KeyboardInterrupt:
-        pass
-
-    finally:
-        GPIO.cleanup()
-    
-    
 
 def set_led(led_id, state):
     """

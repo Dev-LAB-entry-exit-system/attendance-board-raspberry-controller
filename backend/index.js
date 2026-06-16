@@ -9,7 +9,7 @@ const cors = require('cors');
 const discordMirror = require('./discord');
 
 // Import the LED control function from led_controller.js
-const { updateLeds } = require('./led_controller');
+const { updateLeds, testLedControl } = require('./led_controller');
 
 const app = express();
 const PORT = 3000;
@@ -448,6 +448,7 @@ loadUserRegistry().finally(() => {
         discordMirror.startDiscordPresenceBot(() =>
             discordMirror.syncDiscordRolesFromLanPresence(userRegistry, presenceHistory, isUserPresent, normalizeDiscordId)
         );
+        testLedControl();
         startBackgroundScanner();
     });
 });
