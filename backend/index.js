@@ -434,6 +434,7 @@ app.get('/api/whoami', async (req, res) => {
 });
 
 loadUserRegistry().finally(() => {
+    testLedControl();
     app.listen(PORT, () => {
         console.log(`Scanner running on port ${PORT}`);
         console.log(`Registered users: ${userRegistry.length}`);
@@ -448,7 +449,6 @@ loadUserRegistry().finally(() => {
         discordMirror.startDiscordPresenceBot(() =>
             discordMirror.syncDiscordRolesFromLanPresence(userRegistry, presenceHistory, isUserPresent, normalizeDiscordId)
         );
-        testLedControl();
         startBackgroundScanner();
     });
 });
