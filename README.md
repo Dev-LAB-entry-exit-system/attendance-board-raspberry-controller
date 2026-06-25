@@ -67,7 +67,7 @@ Presence Judgment (history window + threshold)
 └─ Discord Role Mirror (discord.js)
 ```
 
-<img src="README-Images/SystemConfigurationDiagram.png" alt="システム構成図" width="400" />
+<img src="README-Images/system configuration diagram.png" alt="システム構成図" width="400" />
 
 ---
 
@@ -292,7 +292,7 @@ Presence Judgment (history window + threshold)
 └─ Discord Role Mirror (discord.js)
 ```
 
-<img src="README-Images/SystemConfigurationDiagram.png" alt="System Configuration Diagram" width="400" />
+<img src="README-Images/system configuration diagram.png" alt="System Configuration Diagram" width="400" />
 
 ---
 
