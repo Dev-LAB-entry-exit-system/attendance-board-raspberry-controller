@@ -12,6 +12,10 @@ const ipAddressPlaceholder = ref('auto-detect');
 const discordId = ref('');
 const statusMessage = ref('');
 const isError = ref(false);
+const lastRefresh = ref(new Date(0));
+const timeToNextRefresh = ref('no connection');
+
+let refreshCountdownIntervalId = 0;
 
 const UPDATE_INTERVAL = 60 * 1000 // 60 seconds
 let intervalId
@@ -25,6 +29,10 @@ const fetchDevices = async () => {
 
     scanResults.value = data.allDevices
     activeUsers.value = nonDeletedUsers
+
+    updateRefreshTimestamp()
+    startRefreshCountdownInterval()
+
   } catch (error) {
     console.error('Failed to fetch devices:', error)
   }
@@ -134,6 +142,36 @@ async function loadTutorial() {
   }
 }
 
+function updateRefreshTimestamp() {
+  lastRefresh.value = new Date(Date.now());
+}
+
+function startRefreshCountdownInterval() {
+  if (refreshCountdownIntervalId === 0) {
+    refreshCountdownIntervalId = setInterval(function () {
+      const targetDate = lastRefresh.value.valueOf() + UPDATE_INTERVAL;
+
+      // Get current date and time in milliseconds
+      const now = new Date().getTime() + 2500;
+
+      // Find the distance between now and the target date
+      const distance = targetDate - now;
+
+      // Time calculations for days, hours, minutes, and seconds
+      const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+      timeToNextRefresh.value = seconds.toString() + "s";
+
+      // If the countdown is finished, stop the timer
+      if (distance < 0) {
+        clearInterval(refreshCountdownIntervalId);
+        refreshCountdownIntervalId = 0;
+        timeToNextRefresh.value = "EXPIRED";
+      }
+    }, 1000);
+  }
+}
+
 onMounted(() => {
   fetchDevices()
   loadTutorial()
@@ -142,6 +180,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   clearInterval(intervalId)
+  if (refreshCountdownIntervalId !== 0) {
+    clearInterval(refreshCountdownIntervalId);
+  }
 })
 </script>
 
@@ -330,6 +371,11 @@ onUnmounted(() => {
       </p>
     </div>
 
+    <div id="footer" class="footer">
+      <p class="font-mono"><strong>Next Refresh: </strong><span id="last-refresh-timestamp">{{ timeToNextRefresh }}</span></p>
+      <p class="font-mono"><strong>Last Refresh: </strong><span id="next-refresh-countdown">{{ lastRefresh.valueOf() === 0 ? 'never' : lastRefresh.toString().split("GMT")[0].trim() }}</span></p>
+    </div>
+
   </div>
 </template>
 
@@ -352,6 +398,17 @@ onUnmounted(() => {
     padding-left: 1em;
     padding-right: 1em;
   }
+}
+
+.footer {
+  position: fixed;
+  bottom: 0.5vw;
+  right: 0.5vw;
+  padding: 0.5vw 1.5vw;
+  border-radius: 15px;
+  box-shadow: 3px 3px 20px 3px rgba(0,0,0,0.3);
+  background-color: rgb(255,255,255);
+  font-size: 0.7em;
 }
 
 .overlay-canvas {
@@ -523,6 +580,11 @@ h1 {
 .inline-listing {
   font-family: "JetBrains Mono", sans-serif;
   font-weight: normal;
+}
+
+.font-mono {
+  font-family: "JetBrains Mono", sans-serif;
+  text-align: left;
 }
 
 ul {
