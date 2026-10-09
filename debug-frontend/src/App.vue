@@ -371,7 +371,7 @@ onUnmounted(() => {
       </p>
     </div>
 
-    <div id="footer" class="footer">
+    <div id="footer" class="footer hide-on-mobile">
       <p class="font-mono"><strong>Next Refresh: </strong><span id="last-refresh-timestamp">{{ timeToNextRefresh }}</span></p>
       <p class="font-mono"><strong>Last Refresh: </strong><span id="next-refresh-countdown">{{ lastRefresh.valueOf() === 0 ? 'never' : lastRefresh.toString().split("GMT")[0].trim() }}</span></p>
     </div>
